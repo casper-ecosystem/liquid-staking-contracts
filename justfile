@@ -9,3 +9,6 @@ build-contracts:
 
 test:
     cargo odra test
+
+cli *ARGS:
+    cargo run --bin liquid-staking-cli -- {{ARGS}}

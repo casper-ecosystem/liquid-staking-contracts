@@ -1,0 +1,13 @@
+[package]
+name = "liquid-staking-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+odra = { git = "https://github.com/odradev/odra", features = [], default-features = false }
+odra-cli = { git = "https://github.com/odradev/odra" }
+liquid-staking-contracts = { path = "../liquid-staking-contracts" }
+
+[[bin]]
+name = "liquid-staking-cli"
+path = "bin/main.rs"

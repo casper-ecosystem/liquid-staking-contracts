@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    # "liquid-staking-cli",
+    "liquid-staking-cli",
     "liquid-staking-contracts",
 ]
 
