@@ -31,7 +31,18 @@ impl StakedCSPR {
             fn balance_of(&self, account: &Address) -> U256;
             fn allowance(&self, owner: &Address, spender: &Address) -> U256;
             fn transfer(&mut self, recipient: &Address, amount: &U256);
+            fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256);
             fn approve(&mut self, spender: &Address, amount: &U256);
+            fn decrease_allowance(&mut self, spender: &Address, decr_by: &U256);
+            fn increase_allowance(&mut self, spender: &Address, inc_by: &U256);
+            fn change_security(
+                &mut self,
+                admin_list: Vec<Address>,
+                minter_list: Vec<Address>,
+                none_list: Vec<Address>
+            );
+            fn mint(&mut self, owner: &Address, amount: &U256);
+            fn burn(&mut self, owner: &Address, amount: &U256);
         }
     }
 

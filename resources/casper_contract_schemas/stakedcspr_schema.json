@@ -629,12 +629,162 @@
       "access": "public"
     },
     {
+      "name": "transfer_from",
+      "description": "Delegated. See `self.token.transfer_from()` for details.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "recipient",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
       "name": "approve",
       "description": "Delegated. See `self.token.approve()` for details.",
       "is_mutable": true,
       "arguments": [
         {
           "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "decrease_allowance",
+      "description": "Delegated. See `self.token.decrease_allowance()` for details.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "decr_by",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "increase_allowance",
+      "description": "Delegated. See `self.token.increase_allowance()` for details.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "inc_by",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "change_security",
+      "description": "Delegated. See `self.token.change_security()` for details.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "admin_list",
+          "description": null,
+          "ty": {
+            "List": "Key"
+          },
+          "optional": false
+        },
+        {
+          "name": "minter_list",
+          "description": null,
+          "ty": {
+            "List": "Key"
+          },
+          "optional": false
+        },
+        {
+          "name": "none_list",
+          "description": null,
+          "ty": {
+            "List": "Key"
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "mint",
+      "description": "Delegated. See `self.token.mint()` for details.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "burn",
+      "description": "Delegated. See `self.token.burn()` for details.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "owner",
           "description": null,
           "ty": "Key",
           "optional": false
