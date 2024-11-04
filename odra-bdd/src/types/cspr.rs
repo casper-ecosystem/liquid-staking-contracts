@@ -1,14 +1,24 @@
 // TODO: CSPRParam
 
-use std::ops::Deref;
-use std::str::FromStr;
 use cucumber::Parameter;
 use odra::casper_types::U512;
+use std::ops::Deref;
+use std::str::FromStr;
 
-#[derive(Parameter, PartialEq)]
+#[derive(Parameter, Debug, PartialEq, Clone, Copy)]
 #[param(regex = r"\d+", name = "cspr_amount")]
 pub struct CSPRAmount {
-    amount: U512
+    amount: U512,
+}
+
+impl CSPRAmount {
+    pub fn new(amount: U512) -> Self {
+        CSPRAmount { amount }
+    }
+
+    pub fn amount(&self) -> U512 {
+        self.amount
+    }
 }
 
 impl Deref for CSPRAmount {

@@ -9,7 +9,7 @@ pub type TokenAmount = U256Param<9>;
 #[derive(World)]
 pub struct LSTWorld {
     pub(crate) env: BDDEnv,
-    pub(crate) token: StakedCSPRHostRef
+    pub(crate) token: StakedCSPRHostRef,
 }
 
 impl Default for LSTWorld {
@@ -20,13 +20,10 @@ impl Default for LSTWorld {
     }
 }
 
-impl LSTWorld {
-
-}
+impl LSTWorld {}
 
 impl std::fmt::Debug for LSTWorld {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "LSTWorld")
     }
 }
-

@@ -1,9 +1,9 @@
+use crate::lst_world::{LSTWorld, TokenAmount};
 use cucumber::{then, when};
 use odra::casper_types::U512;
 use odra::host::HostRef;
 use odra_bdd::types::account::Account;
 use odra_bdd::types::cspr::CSPRAmount;
-use crate::lst_world::{LSTWorld, TokenAmount};
 
 #[when(expr = "{account} stakes {cspr_amount} CSPR")]
 fn stake_cspr(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
@@ -15,6 +15,12 @@ fn stake_cspr(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
 fn unstake_cspr(world: &mut LSTWorld, account: Account, token_amount: TokenAmount) {
     world.env.set_caller(&account);
     world.token.unstake(*token_amount);
+}
+
+#[when(expr = "{account} claims unstake with id {int}")]
+fn claim_unstake(world: &mut LSTWorld, account: Account, unstake_id: u32) {
+    world.env.set_caller(&account);
+    world.token.claim(unstake_id);
 }
 
 #[then(expr = "staked CSPR is {cspr_amount} CSPR")]

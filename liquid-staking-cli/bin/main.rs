@@ -1,6 +1,6 @@
+use liquid_staking_contracts::token::StakedCSPR;
 use odra::host::{Deployer, HostEnv, NoArgs};
 use odra_cli::OdraCli;
-use liquid_staking_contracts::token::StakedCSPR;
 
 pub struct DeployScript;
 impl odra_cli::deploy::DeployScript for DeployScript {

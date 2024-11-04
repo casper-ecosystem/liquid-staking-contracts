@@ -1,6 +1,6 @@
+use crate::lst_world::{LSTWorld, TokenAmount};
 use cucumber::then;
 use odra_bdd::types::account::Account;
-use crate::lst_world::{LSTWorld, TokenAmount};
 
 #[then(expr = "name is {string}")]
 fn check_name(world: &mut LSTWorld, name: String) {

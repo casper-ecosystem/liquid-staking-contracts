@@ -1,13 +1,13 @@
-use odra::{casper_types::{U256, U512}, prelude::*};
+use crate::token::Error::{AlreadyClaimed, NotAnOwnerOfAClaim, NotYetClaimable, UnstakeNotFound};
+use odra::{
+    casper_types::{U256, U512},
+    prelude::*,
+};
 use odra_modules::{
     access::{AccessControl, Role, DEFAULT_ADMIN_ROLE},
-    cep18::{
-        utils::Cep18Modality,
-        errors::Error as Cep18Error,
-    },
+    cep18::{errors::Error as Cep18Error, utils::Cep18Modality},
     cep18_token::Cep18,
 };
-use crate::token::Error::{AlreadyClaimed, NotAnOwnerOfAClaim, NotYetClaimable, UnstakeNotFound};
 
 #[odra::odra_error]
 pub enum Error {
@@ -34,7 +34,7 @@ struct Unstake {
     owner: Address,
     cspr_amount: U512,
     claimable_from: u64,
-    claimed: bool
+    claimed: bool,
 }
 
 #[odra::module]
@@ -120,12 +120,16 @@ impl StakedCSPR {
         });
 
         self.unstake_ids.set(&caller, account_unstake_ids);
-        self.unclaimed_cspr.set(self.unclaimed_cspr.get().unwrap_or_default() + cspr_amount);
+        self.unclaimed_cspr
+            .set(self.unclaimed_cspr.get().unwrap_or_default() + cspr_amount);
         new_unstake_id
     }
 
     pub fn claim(&mut self, receipt_id: u32) {
-        let mut unstake = self.unstakes.get(receipt_id).unwrap_or_revert_with(self, UnstakeNotFound);
+        let mut unstake = self
+            .unstakes
+            .get(receipt_id)
+            .unwrap_or_revert_with(self, UnstakeNotFound);
         if unstake.claimable_from > self.env().get_block_time() {
             self.env().revert(NotYetClaimable);
         }
@@ -137,9 +141,11 @@ impl StakedCSPR {
             self.env().revert(NotAnOwnerOfAClaim);
         }
 
-        self.env().transfer_tokens(&unstake.owner, &unstake.cspr_amount);
+        self.env()
+            .transfer_tokens(&unstake.owner, &unstake.cspr_amount);
         unstake.claimed = true;
-        self.unclaimed_cspr.set(self.unclaimed_cspr.get().unwrap_or_default() - unstake.cspr_amount);
+        self.unclaimed_cspr
+            .set(self.unclaimed_cspr.get().unwrap_or_default() - unstake.cspr_amount);
         self.unstakes.replace(receipt_id, unstake);
     }
 
