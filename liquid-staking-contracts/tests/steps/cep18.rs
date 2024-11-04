@@ -23,8 +23,9 @@ fn check_total_supply(world: &mut LSTWorld, expected_total_supply: TokenAmount) 
     assert_eq!(total_supply, expected_total_supply);
 }
 
+#[then(expr = "{account} token balance is {token_amount} sCSPR")]
 #[then(expr = "{account}'s token balance is {token_amount} sCSPR")]
 fn check_token_balance(world: &mut LSTWorld, account: Account, expected_balance: TokenAmount) {
-    let balance = TokenAmount::from(world.token.balance_of(&world.get_address(&account)));
+    let balance = TokenAmount::from(world.token.balance_of(&world.env.get_address(&account)));
     assert_eq!(balance, expected_balance);
 }

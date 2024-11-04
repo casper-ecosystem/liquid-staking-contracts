@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use std::str::FromStr;
 
 use cucumber::Parameter;
@@ -8,6 +9,14 @@ use odra::casper_types::U256;
 #[derive(Parameter, PartialEq)]
 #[param(regex = r"\d+", name = "token_amount")]
 pub struct U256Param<const T: usize>(U256);
+
+impl<const T: usize> Deref for U256Param<T> {
+    type Target = U256;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl<const T: usize> U256Param<T> {
     pub fn as_u256(&self) -> U256 {

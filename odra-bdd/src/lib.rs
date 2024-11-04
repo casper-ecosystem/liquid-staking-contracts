@@ -1,5 +1,7 @@
 pub mod types;
 
+pub mod env;
+
 use std::fmt::Debug;
 use cucumber::{codegen::WorldInventory, World};
 

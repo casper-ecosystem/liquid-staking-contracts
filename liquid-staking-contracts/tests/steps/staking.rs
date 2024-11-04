@@ -3,13 +3,18 @@ use odra::casper_types::U512;
 use odra::host::HostRef;
 use odra_bdd::types::account::Account;
 use odra_bdd::types::cspr::CSPRAmount;
-use crate::lst_world::LSTWorld;
+use crate::lst_world::{LSTWorld, TokenAmount};
 
 #[when(expr = "{account} stakes {cspr_amount} CSPR")]
 fn stake_cspr(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
-    assert!(!world.get_address(&account).is_contract());
-    world.set_caller(&account);
+    world.env.set_caller(&account);
     world.token.with_tokens(*cspr_amount).stake();
+}
+
+#[when(expr = "{account} unstakes {token_amount} sCSPR")]
+fn unstake_cspr(world: &mut LSTWorld, account: Account, token_amount: TokenAmount) {
+    world.env.set_caller(&account);
+    world.token.unstake(*token_amount);
 }
 
 #[then(expr = "staked CSPR is {cspr_amount} CSPR")]

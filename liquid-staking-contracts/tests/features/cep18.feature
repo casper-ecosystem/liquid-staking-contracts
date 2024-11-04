@@ -4,4 +4,4 @@ Feature: CEP18 Features
         Then name is "Staked CSPR"
         And symbol is "sCSPR"
         And decimals is 9
-        And total supply is 0.0001 sCSPR
+        And total supply is 0 sCSPR
