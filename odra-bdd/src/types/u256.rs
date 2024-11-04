@@ -31,7 +31,7 @@ impl<const T: usize> std::fmt::Debug for U256Param<T> {
 impl<const T: usize> FromStr for U256Param<T> {
     type Err = String;
 
-    fn from_str(s: &str) -> core::result::Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         // TODO: use T as the number of decimal places
         let value = U256::from_dec_str(s).map_err(|e| e.to_string())?;
         Ok(U256Param(value))
