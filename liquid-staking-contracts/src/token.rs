@@ -7,11 +7,34 @@ use odra_modules::{
     },
     cep18_token::Cep18,
 };
+use crate::token::Error::{AlreadyClaimed, NotAnOwnerOfAClaim, NotYetClaimable, UnstakeNotFound};
 
-#[odra::module]
+#[odra::odra_error]
+pub enum Error {
+    NotYetClaimable = 61401,
+    AlreadyClaimed = 61402,
+    NotAnOwnerOfAClaim = 61403,
+    UnstakeNotFound = 61404,
+}
+
+#[odra::module(
+    errors = Error
+)]
 pub struct StakedCSPR {
     access_control: SubModule<AccessControl>,
     token: SubModule<Cep18>,
+    unstake_ids: Mapping<Address, Vec<u32>>,
+    unstakes: List<Unstake>,
+    unclaimed_cspr: Var<U512>,
+}
+
+#[odra::odra_type]
+struct Unstake {
+    unstake_id: u32,
+    owner: Address,
+    cspr_amount: U512,
+    claimable_from: u64,
+    claimed: bool
 }
 
 #[odra::module]
@@ -68,28 +91,86 @@ impl StakedCSPR {
     #[odra(payable)]
     pub fn stake(&mut self) {
         let caller = self.env().caller();
-        let amount = self.env().attached_value();
-        // TODO: When available use ffi to stake.
-        self.token.raw_mint(&caller, &u512_to_u256(amount));
+        let cspr_amount = self.env().attached_value();
+        let scspr_amount = self.cspr_to_scspr(cspr_amount);
+        self.ffi_stake(cspr_amount);
+        self.token.raw_mint(&caller, &scspr_amount);
     }
 
-    pub fn unstake(&mut self, amount: U256) {
+    pub fn unstake(&mut self, scspr_amount: U256) -> u32 {
         let caller = self.env().caller();
-        if self.token.balance_of(&caller) < amount {
+        if self.token.balance_of(&caller) < scspr_amount {
             self.env().revert(Cep18Error::InsufficientBalance);
         }
-        self.token.raw_burn(&caller, &amount);
-        self.env().transfer_tokens(&caller, &u256_to_u512(amount));
+
+        let cspr_amount = self.scspr_to_cspr(scspr_amount);
+        self.token.raw_burn(&caller, &scspr_amount);
+        self.ffi_unstake(cspr_amount);
+
+        let mut account_unstake_ids = self.unstake_ids.get(&caller).unwrap_or_default();
+        let new_unstake_id = self.unstakes.len();
+        account_unstake_ids.push(new_unstake_id);
+
+        self.unstakes.push(Unstake {
+            unstake_id: new_unstake_id,
+            owner: caller,
+            cspr_amount,
+            claimable_from: self.claim_time(),
+            claimed: false,
+        });
+
+        self.unstake_ids.set(&caller, account_unstake_ids);
+        self.unclaimed_cspr.set(self.unclaimed_cspr.get().unwrap_or_default() + cspr_amount);
+        new_unstake_id
+    }
+
+    pub fn claim(&mut self, receipt_id: u32) {
+        let mut unstake = self.unstakes.get(receipt_id).unwrap_or_revert_with(self, UnstakeNotFound);
+        if unstake.claimable_from > self.env().get_block_time() {
+            self.env().revert(NotYetClaimable);
+        }
+        if unstake.claimed {
+            self.env().revert(AlreadyClaimed);
+        }
+        let caller = self.env().caller();
+        if unstake.owner != caller {
+            self.env().revert(NotAnOwnerOfAClaim);
+        }
+
+        self.env().transfer_tokens(&unstake.owner, &unstake.cspr_amount);
+        unstake.claimed = true;
+        self.unclaimed_cspr.set(self.unclaimed_cspr.get().unwrap_or_default() - unstake.cspr_amount);
+        self.unstakes.replace(receipt_id, unstake);
     }
 
     pub fn staked_cspr(&self) -> U512 {
-        self.env().self_balance() - self.total_unclaimed_cspr()
+        self.env().self_balance() - self.unclaimed_cspr.get().unwrap_or_default()
     }
 }
 
 impl StakedCSPR {
-    pub fn total_unclaimed_cspr(&self) -> U512 {
-        0.into() // TODO: Implement this.
+    pub fn claim_time(&self) -> u64 {
+        // TODO: confirm the era duration and unstake time.
+        let seven_eras = 7 * 2 * 60 * 60 * 1000;
+        self.env().get_block_time() + seven_eras
+    }
+
+    pub fn cspr_to_scspr(&self, amount: U512) -> U256 {
+        // TODO: Implement correct conversion.
+        u512_to_u256(amount)
+    }
+
+    pub fn scspr_to_cspr(&self, amount: U256) -> U512 {
+        // TODO: Implement correct conversion.
+        u256_to_u512(amount)
+    }
+
+    pub fn ffi_stake(&self, _amount: U512) {
+        // TODO: Implement when available.
+    }
+
+    pub fn ffi_unstake(&self, _amount: U512) {
+        // TODO: Implement when available.
     }
 }
 

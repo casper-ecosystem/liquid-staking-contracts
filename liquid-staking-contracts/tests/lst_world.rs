@@ -1,7 +1,7 @@
 use cucumber::World;
 use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRHostRef};
 use odra::host::{Deployer, NoArgs};
-use odra_bdd::env::BDDEnv;
+use odra_bdd::bdd_env::BDDEnv;
 use odra_bdd::types::u256::U256Param;
 
 pub type TokenAmount = U256Param<9>;
