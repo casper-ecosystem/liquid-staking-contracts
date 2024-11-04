@@ -69,6 +69,7 @@ impl StakedCSPR {
     pub fn stake(&mut self) {
         let caller = self.env().caller();
         let amount = self.env().attached_value();
+        // TODO: When available use ffi to stake.
         self.token.raw_mint(&caller, &u512_to_u256(amount));
     }
 
@@ -79,6 +80,16 @@ impl StakedCSPR {
         }
         self.token.raw_burn(&caller, &amount);
         self.env().transfer_tokens(&caller, &u256_to_u512(amount));
+    }
+}
+
+impl StakedCSPR {
+    pub fn staked_cspr(&self) -> U512 {
+        self.env().self_balance() - self.total_unclaimed_cspr()
+    }
+
+    pub fn total_unclaimed_cspr(&self) -> U512 {
+        0.into() // TODO: Implement this.
     }
 }
 

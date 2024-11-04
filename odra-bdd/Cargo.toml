@@ -1,0 +1,10 @@
+[package]
+name = "odra-bdd"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cucumber = "0.21.1"
+futures = "0.3.5"
+derive_more = { version= "1.0.0", features = ["full"] }
+odra = {git = "https://github.com/odradev/odra", features = [], default-features = false }

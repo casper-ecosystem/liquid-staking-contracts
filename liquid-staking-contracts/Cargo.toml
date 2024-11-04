@@ -9,6 +9,8 @@ odra-modules = {git = "https://github.com/odradev/odra", features = [], default-
 
 [dev-dependencies]
 odra-test = {git = "https://github.com/odradev/odra", features = [], default-features = false }
+cucumber = "0.21.1"
+odra-bdd = {path = "../odra-bdd"}
 
 [build-dependencies]
 odra-build = {git = "https://github.com/odradev/odra", features = [], default-features = false }
@@ -25,3 +27,7 @@ test = false
 name = "liquid-staking-contracts_build_schema"
 path = "bin/build_schema.rs"
 test = false
+
+[[test]]
+name = "test_staking"
+harness = false 

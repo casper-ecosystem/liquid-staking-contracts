@@ -2,6 +2,7 @@
 members = [
     "liquid-staking-cli",
     "liquid-staking-contracts",
+    "odra-bdd",
 ]
 
 resolver = "2"
