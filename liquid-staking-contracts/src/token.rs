@@ -1,4 +1,4 @@
-use crate::token::Error::{AlreadyClaimed, NotAnOwnerOfAClaim, NotYetClaimable, UnstakeNotFound};
+use crate::token::Error::*;
 use odra::{
     casper_types::{U256, U512},
     prelude::*,
@@ -15,6 +15,8 @@ pub enum Error {
     AlreadyClaimed = 61402,
     NotAnOwnerOfAClaim = 61403,
     UnstakeNotFound = 61404,
+    NotAnOwner = 61405,
+    InsufficientBalance = 61406,
 }
 
 #[odra::module(
@@ -150,7 +152,27 @@ impl StakedCSPR {
     }
 
     pub fn staked_cspr(&self) -> U512 {
-        self.env().self_balance() - self.unclaimed_cspr.get().unwrap_or_default()
+        self.env().self_balance()
+            - self.unclaimed_cspr.get().unwrap_or_default()
+            - self.env().attached_value()
+    }
+
+    #[odra(payable)]
+    pub fn add_to_the_pool(&mut self) {}
+
+    pub fn withdraw_from_the_pool(&mut self, amount: U512) {
+        if !self
+            .access_control
+            .has_role(&DEFAULT_ADMIN_ROLE, &self.env().caller())
+        {
+            self.env().revert(NotAnOwner);
+        }
+
+        if !self.staked_cspr() < amount {
+            self.env().revert(InsufficientBalance);
+        }
+
+        self.env().transfer_tokens(&self.env().caller(), &amount);
     }
 }
 
@@ -161,14 +183,26 @@ impl StakedCSPR {
         self.env().get_block_time() + seven_eras
     }
 
-    pub fn cspr_to_scspr(&self, amount: U512) -> U256 {
-        // TODO: Implement correct conversion.
-        u512_to_u256(amount)
+    pub fn cspr_to_scspr(&self, cspr_stake: U512) -> U256 {
+        let staked_cspr = self.staked_cspr();
+        if staked_cspr.is_zero() {
+            return u512_to_u256(cspr_stake);
+        }
+        let scspr_total_supply = u256_to_u512(self.token.total_supply());
+        u512_to_u256(cspr_stake * scspr_total_supply / staked_cspr)
     }
 
-    pub fn scspr_to_cspr(&self, amount: U256) -> U512 {
-        // TODO: Implement correct conversion.
-        u256_to_u512(amount)
+    pub fn scspr_to_cspr(&self, scspr: U256) -> U512 {
+        if scspr.is_zero() {
+            return U512::zero();
+        }
+        let scspr_total_supply = u256_to_u512(self.token.total_supply());
+        if scspr_total_supply.is_zero() {
+            return U512::zero();
+        }
+        let staked_cspr = self.staked_cspr();
+
+        u256_to_u512(scspr) * staked_cspr / scspr_total_supply
     }
 
     pub fn ffi_stake(&self, _amount: U512) {

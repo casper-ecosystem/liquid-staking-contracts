@@ -12,8 +12,9 @@ impl FromStr for Account {
 
     fn from_str(s: &str) -> core::result::Result<Self, Self::Err> {
         match s {
-            "Alice" => Ok(Account { account_id: 0 }),
-            "Bob" => Ok(Account { account_id: 1 }),
+            "Owner" => Ok(Account { account_id: 0 }),
+            "Alice" => Ok(Account { account_id: 1 }),
+            "Bob" => Ok(Account { account_id: 2 }),
             _ => Err(format!("Unknown account: {}", s)),
         }
     }

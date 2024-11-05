@@ -23,7 +23,21 @@ fn claim_unstake(world: &mut LSTWorld, account: Account, unstake_id: u32) {
     world.token.claim(unstake_id);
 }
 
+#[when(expr = "{account} adds {cspr_amount} CSPR to the pool")]
+fn add_to_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
+    world.env.set_caller(&account);
+    world.token.with_tokens(*cspr_amount).add_to_the_pool();
+}
+
+#[when(expr = "{account} withdraws {cspr_amount} CSPR from the pool")]
+#[when(expr = "{account} removes {cspr_amount} CSPR from the pool")]
+fn withdraw_from_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
+    world.env.set_caller(&account);
+    world.token.withdraw_from_the_pool(*cspr_amount);
+}
+
 #[then(expr = "staked CSPR is {cspr_amount} CSPR")]
+#[then(expr = "{cspr_amount} CSPR is staked")]
 fn check_staked_cspr(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
     let staked_cspr = U512::from(world.token.staked_cspr());
     assert_eq!(staked_cspr, *cspr_amount);
