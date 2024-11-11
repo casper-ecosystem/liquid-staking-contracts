@@ -94,3 +94,4 @@ User X claims "available unstaked" CSPR
 ## Action items
 
 1. Lorenzo will provide Figma mock-ups for the MVP version
+2. David will prepare technical requirements for the MVP version
