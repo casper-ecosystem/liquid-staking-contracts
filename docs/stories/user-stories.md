@@ -25,7 +25,14 @@
     1. As a user, I should be able to approve and deploy the claim transaction via CSPR.click, so that it's executed.
     1. As the StakeCSPR app, I should monitor claim transaction execution, so that when the results are available the CSPR amount transferred is displayed to the user.
 
+
 1. As an external smart contract, I should be able to call the StakeCSPR smart contract to get the current rate sCSPR/CSPR.
+
+1. As an external smart contract, I should be able to call the StakeCSPR smart contract to stake CSPR, so that I get sCSPR in return.
+
+1. As an external smart contract, I should be able to call the StakeCSPR smart contract to unstake sCSPR, so that I get a receipt id in return.
+
+1. As an external smart contract, I should be able to claim the unstaked CSPR after 7 eras using the receipt id.
 
 TBD
 
