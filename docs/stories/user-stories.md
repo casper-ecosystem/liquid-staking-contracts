@@ -63,6 +63,8 @@
    1. As an external smart contract, I should be able to call the StakeCSPR smart contract to unstake sCSPR, so that I get a receipt id in return.
    1. As an external smart contract, I should be able to claim the unstaked CSPR after 7 eras using the receipt id.
 
+### Admin interfaces (not for web app)
+
 #### sCSPR value increase
 
    1. As a StakeCSPR smart contract admin, I should be able to add CSPR to the delegated amount, so that the sCSPR/CSPR rate increases.
