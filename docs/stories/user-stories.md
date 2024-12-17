@@ -39,15 +39,15 @@
     1. As the Stake tab, I should display a completed execution status which includes CSPR amount staked, sCSPR amount get in return, and the transaction fees.
 
 1. As an sCSPR holder, I should be able to initiate an unstake CSPR operation, so that I get a receipt id in return.
-    1. As the Unstake tab, I should clearly indicate the user that unstake operation takes 7 eras, and she has to come back to claim the unstaked CSPR after that time.
+    1. As the Unstake tab, I should clearly indicate the user that after sending the unstake request he must wait 12 eras (24 hrs) to claim the unstaked CSPR.
     1. As a user, I should be able to enter an amount of sCSPR so that the application shows a CSPR value approximation to get after the unstake is completed.
     1. As the Unstake tab, I should verify the user has enough sCSPR to exchange as well as CSPR to pay for the fees to submit the transaction, and display an error otherwise.
     1. As a user, I should be able to approve and deploy the unstake transaction via CSPR.click, so that it's send to the network for execution.
     1. As the Unstake tab, I should display a pending execution status, so that the user knows she needs to wait for the results.
-    1. As the Unstake tab, I should display a completed execution status which includes sCSPR amount sent, CSPR amount unstaked, the claim/receipt id, and the transaction fees.
+    1. As the Unstake tab, I should display a completed execution status which includes sCSPR amount sent, CSPR amount unstaked, the claim/receipt id, the claim availability timestamp, and the transaction fees.
 
-1. As a user, I should be able to claim the unstaked CSPR after 7 eras using the receipt id.
-    1. As the Claim tab, I should list all pending claim operations, with the Unstake timestamp, the sCPSR sent, and the CSPR that will be withdrawn.
+1. As a user, I should be able to claim the unstaked CSPR after 12 eras (24 hrs) using the receipt id.
+    1. As the Claim tab, I should list all pending claim operations, with the Unstake request timestamp, the sCPSR sent, and the CSPR that will be withdrawn.
     1. As the Claim tab, I should have a Claim now button for every available claim operation.
     1. As the Claim tab, I should have a countdown timer for every pending claim that shows when the operation will be available.  
     1. As a user, I should be able to click on Claim now, and approve the transaction via CSPR.click, so that it's send to the network for execution.
@@ -61,7 +61,7 @@
    1. As an external smart contract, I should be able to call the StakeCSPR smart contract to get the current rate sCSPR/CSPR.
    1. As an external smart contract, I should be able to call the StakeCSPR smart contract to stake CSPR, so that I get sCSPR in return.
    1. As an external smart contract, I should be able to call the StakeCSPR smart contract to unstake sCSPR, so that I get a receipt id in return.
-   1. As an external smart contract, I should be able to claim the unstaked CSPR after 7 eras using the receipt id.
+   1. As an external smart contract, I should be able to claim the unstaked CSPR after 12 eras using the receipt id.
 
 ### Admin interfaces (not for web app)
 
