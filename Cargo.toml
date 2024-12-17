@@ -7,6 +7,16 @@ members = [
 
 resolver = "2"
 
+[workspace.dependencies]
+odra = { git = "https://github.com/odradev/odra.git", branch = "feature/casper-2.0" }
+odra-cli = { git = "https://github.com/odradev/odra.git", branch = "feature/casper-2.0" }
+odra-modules = { git = "https://github.com/odradev/odra.git", branch = "feature/casper-2.0" }
+odra-test = { git = "https://github.com/odradev/odra.git", branch = "feature/casper-2.0" }
+odra-build = { git = "https://github.com/odradev/odra.git", branch = "feature/casper-2.0" }
+cucumber = "0.21.1"
+futures = "0.3.5"
+derive_more = { version = "1.0.0", features = ["full"] }
+
 [profile.release]
 codegen-units = 1
 lto = true
@@ -16,3 +26,6 @@ strip = true
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[patch.crates-io]
+casper-types = { version = "5.0.0", git = "https://github.com/casper-network/casper-node.git", branch = "feat-2.0" }

@@ -5,4 +5,5 @@ Cargo.lock
 .backend*
 .builder*
 /wasm
+liquid-staking-contracts/wasm
 .env

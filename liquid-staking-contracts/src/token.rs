@@ -1,6 +1,6 @@
 use crate::token::Error::*;
 use odra::{
-    casper_types::{U256, U512},
+    casper_types::{PublicKey, U256, U512},
     prelude::*,
 };
 use odra_modules::{
@@ -17,6 +17,7 @@ pub enum Error {
     UnstakeNotFound = 61404,
     NotAnOwner = 61405,
     InsufficientBalance = 61406,
+    MisconfiguredValidator = 61407,
 }
 
 #[odra::module(
@@ -28,6 +29,8 @@ pub struct StakedCSPR {
     unstake_ids: Mapping<Address, Vec<u32>>,
     unstakes: List<Unstake>,
     unclaimed_cspr: Var<U512>,
+    validator_address: Var<PublicKey>,
+    claim_time: Var<u64>,
 }
 
 #[odra::odra_type]
@@ -71,13 +74,17 @@ impl StakedCSPR {
         }
     }
 
-    pub fn init(&mut self) {
+    pub fn init(&mut self, validator_address: PublicKey, claim_time: u64) {
         let admin = self.env().caller();
 
         // Grant the admin role to the deployer.
         self.access_control
             .unchecked_grant_role(&DEFAULT_ADMIN_ROLE, &admin);
 
+        // Initialize the validator address.
+        self.validator_address.set(validator_address);
+        // Initialize the claim time.
+        self.claim_time.set(claim_time);
         // Initialize the token.
         self.token.init(
             String::from("sCSPR"),
@@ -95,7 +102,12 @@ impl StakedCSPR {
         let caller = self.env().caller();
         let cspr_amount = self.env().attached_value();
         let scspr_amount = self.cspr_to_scspr(cspr_amount);
-        self.ffi_stake(cspr_amount);
+        self.env().delegate(
+            self.validator_address
+                .get()
+                .unwrap_or_revert_with(self, MisconfiguredValidator),
+            cspr_amount,
+        );
         self.token.raw_mint(&caller, &scspr_amount);
     }
 
@@ -107,7 +119,12 @@ impl StakedCSPR {
 
         let cspr_amount = self.scspr_to_cspr(scspr_amount);
         self.token.raw_burn(&caller, &scspr_amount);
-        self.ffi_unstake(cspr_amount);
+        self.env().undelegate(
+            self.validator_address
+                .get()
+                .unwrap_or_revert_with(self, MisconfiguredValidator),
+            cspr_amount,
+        );
 
         let mut account_unstake_ids = self.unstake_ids.get(&caller).unwrap_or_default();
         let new_unstake_id = self.unstakes.len();
@@ -152,13 +169,31 @@ impl StakedCSPR {
     }
 
     pub fn staked_cspr(&self) -> U512 {
-        self.env().self_balance()
-            - self.unclaimed_cspr.get().unwrap_or_default()
-            - self.env().attached_value()
+        self.env().delegated_amount(
+            self.validator_address
+                .get()
+                .unwrap_or_revert_with(self, MisconfiguredValidator),
+        )
     }
 
     #[odra(payable)]
-    pub fn add_to_the_pool(&mut self) {}
+    pub fn add_to_the_pool(&mut self) {
+        self.env().delegate(
+            self.validator_address
+                .get()
+                .unwrap_or_revert_with(self, MisconfiguredValidator),
+            self.env().attached_value(),
+        );
+    }
+
+    pub fn remove_from_the_pool(&mut self, amount: U512) {
+        self.env().undelegate(
+            self.validator_address
+                .get()
+                .unwrap_or_revert_with(self, MisconfiguredValidator),
+            amount,
+        );
+    }
 
     pub fn withdraw_from_the_pool(&mut self, amount: U512) {
         if !self
@@ -168,7 +203,7 @@ impl StakedCSPR {
             self.env().revert(NotAnOwner);
         }
 
-        if !self.staked_cspr() < amount {
+        if !self.env().self_balance() < amount {
             self.env().revert(InsufficientBalance);
         }
 
@@ -178,9 +213,7 @@ impl StakedCSPR {
 
 impl StakedCSPR {
     pub fn claim_time(&self) -> u64 {
-        // TODO: confirm the era duration and unstake time.
-        let seven_eras = 7 * 2 * 60 * 60 * 1000;
-        self.env().get_block_time() + seven_eras
+        self.claim_time.get().unwrap_or_default()
     }
 
     pub fn cspr_to_scspr(&self, cspr_stake: U512) -> U256 {
@@ -204,14 +237,6 @@ impl StakedCSPR {
 
         u256_to_u512(scspr) * staked_cspr / scspr_total_supply
     }
-
-    pub fn ffi_stake(&self, _amount: U512) {
-        // TODO: Implement when available.
-    }
-
-    pub fn ffi_unstake(&self, _amount: U512) {
-        // TODO: Implement when available.
-    }
 }
 
 fn u512_to_u256(value: U512) -> U256 {
@@ -224,22 +249,35 @@ fn u256_to_u512(value: U256) -> U512 {
 
 #[cfg(test)]
 mod tests {
-    use odra::host::{Deployer, HostRef, NoArgs};
+    use odra::host::{Deployer, HostRef};
 
     use super::*;
 
     #[test]
     fn test_initialization() {
         let env = odra_test::env();
-        let token = StakedCSPR::deploy(&env, NoArgs);
+        let token = StakedCSPR::deploy(
+            &env,
+            StakedCSPRInitArgs {
+                validator_address: env.get_validator(),
+                claim_time: env.era_length() * 7,
+            },
+        );
         assert!(token.has_role(&DEFAULT_ADMIN_ROLE, &env.caller()));
     }
 
     #[test]
     fn test_staking() {
+        const UNSTAKE_TIME: u64 = 7 * 2 * 60 * 60 * 1000;
         // Given a deployed StakedCSPR contract.
         let env = odra_test::env();
-        let mut token = StakedCSPR::deploy(&env, NoArgs);
+        let mut token = StakedCSPR::deploy(
+            &env,
+            StakedCSPRInitArgs {
+                validator_address: env.get_validator(),
+                claim_time: env.era_length() * 7,
+            },
+        );
 
         // Given Alice and Bob.
         let alice = env.get_account(1);
@@ -252,6 +290,9 @@ mod tests {
         let deposit_amount_u256 = U256::from(10_000_000_000u64);
         env.set_caller(alice);
         token.with_tokens(deposit_amount_u512).stake();
+
+        // Then staked CSPR should be 10 CSPR.
+        assert_eq!(token.staked_cspr(), deposit_amount_u512);
 
         // Then Alice's balance should be less by 10 CSPR.
         let expected_amount = alice_initial_cspr_balance - deposit_amount_u512;
@@ -270,6 +311,14 @@ mod tests {
 
         // Then Bob's balance should be 0 sCSPR.
         assert_eq!(token.balance_of(&bob), U256::zero());
+
+        // When time passes.
+        env.advance_with_rewards(env.era_length() * 10);
+        env.advance_block_time(UNSTAKE_TIME);
+
+        // And bob claims his unstake.
+        env.set_caller(bob);
+        token.claim(0);
 
         // Then Bob's CSPR balance should be 10 CSPR more.
         let expected_amount = bob_initial_cspr_balance + deposit_amount_u512;

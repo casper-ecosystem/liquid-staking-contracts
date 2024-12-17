@@ -1,5 +1,5 @@
-use liquid_staking_contracts::token::StakedCSPR;
-use odra::host::{Deployer, HostEnv, NoArgs};
+use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRInitArgs};
+use odra::host::{Deployer, HostEnv};
 use odra_cli::OdraCli;
 
 pub struct DeployScript;
@@ -10,7 +10,13 @@ impl odra_cli::deploy::DeployScript for DeployScript {
         container: &mut odra_cli::DeployedContractsContainer,
     ) -> Result<(), odra_cli::deploy::Error> {
         env.set_gas(250_000_000_000);
-        let token = StakedCSPR::try_deploy(&env, NoArgs)?;
+        let token = StakedCSPR::try_deploy(
+            &env,
+            StakedCSPRInitArgs {
+                validator_address: env.get_validator(),
+                claim_time: env.era_length() * 7,
+            },
+        )?;
         container.add_contract(&token)?;
         Ok(())
     }

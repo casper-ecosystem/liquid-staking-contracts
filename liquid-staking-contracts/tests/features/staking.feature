@@ -9,7 +9,7 @@ Feature: Liquid Staking features
     When Alice unstakes 50 sCSPR
     Then Alice's token balance is 50 sCSPR
     And Alice's CSPR balance is 0 CSPR
-    When 7 eras pass
+    When 1 auction passes
     And Alice claims unstake with id 0
     Then Alice has 50 CSPR
     And total supply is 50 sCSPR
@@ -19,7 +19,7 @@ Feature: Liquid Staking features
     When Alice stakes 100 CSPR
     And Owner adds 100 CSPR to the pool
     And Alice unstakes 100 sCSPR
-    And 7 eras pass
+    And 1 auction passes
     And Alice claims unstake with id 0
     Then Alice has 200 CSPR
 
@@ -39,7 +39,7 @@ Feature: Liquid Staking features
     And Alice's CSPR balance is 0 CSPR
     And Bob's CSPR balance is 0 CSPR
     And staked CSPR is 150 CSPR
-    When 7 eras pass
+    When 1 auction passes
     And Alice claims unstake with id 0
     Then Alice has 50 CSPR
     And Bob has 0 CSPR
@@ -53,7 +53,7 @@ Feature: Liquid Staking features
     And Owner adds 100 CSPR to the pool
     And Alice unstakes 50 sCSPR
     And Bob unstakes 150 sCSPR
-    And 7 eras pass
+    And 1 auction passes
     And Alice claims unstake with id 0
     And Bob claims unstake with id 1
     Then Alice has 75 CSPR

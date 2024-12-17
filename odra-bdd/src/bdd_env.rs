@@ -38,4 +38,8 @@ impl BDDEnv {
     pub fn env(&self) -> &HostEnv {
         &self.env
     }
+
+    pub fn advance_with_rewards(&mut self) {
+        self.env.advance_with_rewards(self.env.era_length() * 10);
+    }
 }

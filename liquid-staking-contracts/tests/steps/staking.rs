@@ -1,6 +1,5 @@
 use crate::lst_world::{LSTWorld, TokenAmount};
 use cucumber::{then, when};
-use odra::casper_types::U512;
 use odra::host::HostRef;
 use odra_bdd::types::account::Account;
 use odra_bdd::types::cspr::CSPRAmount;
@@ -29,8 +28,13 @@ fn add_to_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmou
     world.token.with_tokens(*cspr_amount).add_to_the_pool();
 }
 
-#[when(expr = "{account} withdraws {cspr_amount} CSPR from the pool")]
 #[when(expr = "{account} removes {cspr_amount} CSPR from the pool")]
+fn remove_from_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
+    world.env.set_caller(&account);
+    world.token.remove_from_the_pool(*cspr_amount);
+}
+
+#[when(expr = "{account} withdraws {cspr_amount} CSPR from the contract")]
 fn withdraw_from_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
     world.env.set_caller(&account);
     world.token.withdraw_from_the_pool(*cspr_amount);
@@ -39,6 +43,5 @@ fn withdraw_from_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: C
 #[then(expr = "staked CSPR is {cspr_amount} CSPR")]
 #[then(expr = "{cspr_amount} CSPR is staked")]
 fn check_staked_cspr(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
-    let staked_cspr = U512::from(world.token.staked_cspr());
-    assert_eq!(staked_cspr, *cspr_amount);
+    assert_eq!(world.token.staked_cspr(), *cspr_amount);
 }

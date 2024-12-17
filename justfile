@@ -8,7 +8,7 @@ build-contracts:
     cargo odra build
 
 test:
-    ODRA_MODULE=StakedCSPR cargo test --test test_staking
+    cargo odra test -b casper
 
 cli *ARGS:
     cargo run --bin liquid-staking-cli -- {{ARGS}}

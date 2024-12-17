@@ -1,6 +1,6 @@
 use cucumber::World;
-use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRHostRef};
-use odra::host::{Deployer, NoArgs};
+use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRHostRef, StakedCSPRInitArgs};
+use odra::host::Deployer;
 use odra_bdd::bdd_env::BDDEnv;
 use odra_bdd::types::u256::U256Param;
 
@@ -15,7 +15,14 @@ pub struct LSTWorld {
 impl Default for LSTWorld {
     fn default() -> Self {
         let env = BDDEnv::new(odra_test::env());
-        let token = StakedCSPR::deploy(env.env(), NoArgs);
+        let validator_address = env.env().get_validator();
+        let token = StakedCSPR::deploy(
+            env.env(),
+            StakedCSPRInitArgs {
+                validator_address,
+                claim_time: env.env().era_length() * 7,
+            },
+        );
         Self { env, token }
     }
 }

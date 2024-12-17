@@ -49,7 +49,6 @@ impl<const T: usize> FromStr for U256Param<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_u256_param_from_str() {
