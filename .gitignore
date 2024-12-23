@@ -7,3 +7,4 @@ Cargo.lock
 /wasm
 liquid-staking-contracts/wasm
 .env
+node_modules/
