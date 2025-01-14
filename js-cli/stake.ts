@@ -24,7 +24,7 @@ program
     .option('--node_url [value]', 'node URL in format {http://localhost:11101/rpc}', 'http://localhost:11101/rpc')
     .option('--network_name [value]', 'network_name', 'casper-net-1')
     .option('--proxy_caller [value]', 'proxy caller wasm file')
-    .option('--contract_hash [value]', 'staking contract address')
+    .option('--contract_package_hash [value]', 'staking contract address')
     .option('--amount [value]', 'amount to unstake')
 
 program.parse();
@@ -44,8 +44,7 @@ const stake = async () => {
     const owner = await getSenderKey(options.owner_keys_path);
     const contractWasm = await fs.readFile(options.proxy_caller);
 
-    const args_bytes: Uint8Array = Args.fromMap({dummy: CLValueString.newCLString("dummy")})
-        .toBytes();
+    const args_bytes: Uint8Array = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
     const serialized_args = CLValueList.newCLList(CLTypeUInt8,
         Array.from(args_bytes)
             .map(value => CLValueUInt8.newCLUint8(value))
@@ -56,7 +55,7 @@ const stake = async () => {
         amount: CLValueUInt512.newCLUInt512(options.amount),
         attached_value: CLValueUInt512.newCLUInt512(options.amount),
         entry_point: CLValueString.newCLString("stake"),
-        contract_package_hash: CLValueByteArray.newCLByteArray(Hash.fromHex(options.contract_hash).toBytes()),
+        contract_package_hash: CLValueByteArray.newCLByteArray(Hash.fromHex(options.contract_package_hash).toBytes()),
         args: serialized_args,
     });
 

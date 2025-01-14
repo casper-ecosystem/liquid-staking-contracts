@@ -17,7 +17,7 @@ program
     .option('--keys_algo [value]', 'Crypto algo ed25519 | secp256K1', 'ed25519')
     .option('--node_url [value]', 'node URL in format {http://localhost:11101/rpc}', 'http://localhost:11101/rpc')
     .option('--network_name [value]', 'network_name', 'casper-net-1')
-    .option('--contract_hash [value]', 'staking contract address')
+    .option('--contract_package_hash [value]', 'staking contract package address')
     .option('--amount [value]', 'amount to unstake')
 
 program.parse();
@@ -43,7 +43,7 @@ const unstake = async () => {
     const transaction = new ContractCallBuilder()
         .from(sender.publicKey)
         .byPackageName("StakedCSPR_package_hash")
-        .byHash(options.contract_hash)
+        .byPackageHash(options.contract_package_hash)
         .entryPoint('unstake')
         .runtimeArgs(args)
         .payment(paymentAmount) // Amount in motes

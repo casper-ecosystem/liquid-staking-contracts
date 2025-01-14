@@ -22,9 +22,11 @@ npm run scripts:install_staking -- \
 
 ```
 npm run scripts:stake -- \
+  --node_url http://52.90.123.125:7777/rpc \
+  --network_name dev-net \
   --owner_keys_path ./nctl-docker/users/user-1/secret_key.pem \
   --proxy_caller ../wasm/proxy_caller_dummy.wasm \
-  --contract_hash <StakedCSPR-contract-hash> \
+  --contract_package_hash 3c3034152dc5183aca4faead260fe71e6805b3c2b45004d3dc19d7dc4f391519 \
   --amount 1000000000
 ```
 
@@ -33,6 +35,6 @@ npm run scripts:stake -- \
 ```
 npm run scripts:unstake -- \
   --owner_keys_path ./nctl-docker/users/user-1/secret_key.pem \
-  --contract_hash <StakedCSPR-contract-hash> \
+  --contract_package_hash 3c3034152dc5183aca4faead260fe71e6805b3c2b45004d3dc19d7dc4f391519 \
   --amount 1000000000
 ```

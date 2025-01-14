@@ -35,7 +35,7 @@ export const getSenderKey = async (filePath: string) => {
 
 const install = async () => {
 
-    const paymentAmount = 300_000_000_000;
+    const paymentAmount = 600_000_000_000;
     const owner = await getSenderKey(options.owner_keys_path);
     const contractWasm = await fs.readFile(options.wasm);
 
