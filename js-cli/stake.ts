@@ -20,7 +20,7 @@ const {program} = require('commander');
 program
     .option('--wasm [value]', 'path to LS contract wasm file')
     .option('--owner_keys_path [value]', 'path to contract owners keys')
-    .option('--keys_algo [value]', 'Crypto algo ed25519 | secp256K1', 'ed25519')
+    .option('--keys_algo [value]', 'Crypto algo ed25519 | secp256k1', 'ed25519')
     .option('--node_url [value]', 'node URL in format {http://localhost:11101/rpc}', 'http://localhost:11101/rpc')
     .option('--network_name [value]', 'network_name', 'casper-net-1')
     .option('--proxy_caller [value]', 'proxy caller wasm file')
@@ -40,8 +40,8 @@ export const getSenderKey = async (filePath: string) => {
 
 const stake = async () => {
 
-    const paymentAmount = 1_000_000_000;
-    const owner = await getSenderKey(options.owner_keys_path);
+    const paymentAmount = 25_000_000_000;
+    const owner = await getSenderKey(options.owner_keys_path, options.keys_algo);
     const contractWasm = await fs.readFile(options.proxy_caller);
 
     const args_bytes: Uint8Array = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
@@ -55,7 +55,7 @@ const stake = async () => {
         amount: CLValueUInt512.newCLUInt512(options.amount),
         attached_value: CLValueUInt512.newCLUInt512(options.amount),
         entry_point: CLValueString.newCLString("stake"),
-        contract_package_hash: CLValueByteArray.newCLByteArray(Hash.fromHex(options.contract_package_hash).toBytes()),
+        package_hash: CLValueByteArray.newCLByteArray(Hash.fromHex(options.contract_package_hash).toBytes()),
         args: serialized_args,
     });
 
