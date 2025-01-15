@@ -31,7 +31,7 @@ program.parse();
 
 const options = program.opts();
 
-export const getSenderKey = async (filePath: string) => {
+export const getSenderKey = async (filePath: string, algo: string) => {
     const pem = await fs.readFile(filePath);
     return PrivateKey.fromPem(pem.toString(),
         KeyAlgorithm.ED25519
