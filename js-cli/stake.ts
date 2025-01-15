@@ -11,7 +11,7 @@ import {
     Hash,
     CLValueList,
     CLTypeUInt8,
-    CLValueUInt8
+    CLValueUInt8, ExecutableDeployItem, ModuleBytes, DeployHeader, Deploy
 } from "casper-js-sdk";
 import * as fs from 'fs/promises';
 
@@ -75,5 +75,42 @@ const stake = async () => {
     console.log("Transaction hash: ", result.transactionHash);
 };
 
+const stake_deploy = async () => {
+
+    const owner = await getSenderKey(options.owner_keys_path, options.keys_algo);
+    const contractWasm = await fs.readFile(options.proxy_caller);
+
+    const args_bytes: Uint8Array = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
+    const serialized_args = CLValueList.newCLList(CLTypeUInt8,
+        Array.from(args_bytes)
+            .map(value => CLValueUInt8.newCLUint8(value))
+    );
+
+    const args = Args.fromMap({
+        amount: CLValueUInt512.newCLUInt512(options.amount),
+        attached_value: CLValueUInt512.newCLUInt512(options.amount),
+        entry_point: CLValueString.newCLString("stake"),
+        package_hash: CLValueByteArray.newCLByteArray(Hash.fromHex(options.contract_package_hash).toBytes()),
+        args: serialized_args,
+    });
+
+    const session = new ExecutableDeployItem();
+    session.moduleBytes = new ModuleBytes(new Uint8Array(contractWasm), args);
+
+    const payment = ExecutableDeployItem.standardPayment("25000000000");
+
+    const deployHeader = DeployHeader.default();
+    deployHeader.account = owner.publicKey;
+    deployHeader.chainName = options.network_name;
+    const deploy = Deploy.makeDeploy(deployHeader, payment, session);
+    deploy.sign(owner);
+
+    const rpcHandler = new HttpHandler(options.node_url);
+    const rpcClient = new RpcClient(rpcHandler);
+    const result = await rpcClient.putDeploy(deploy);
+
+    console.log(`Deploy Hash: ${result.deployHash.toHex()}`);
+};
+
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
-stake();
+stake_deploy();
