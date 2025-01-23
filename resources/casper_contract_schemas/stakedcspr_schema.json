@@ -1,6 +1,6 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.79.0-nightly (3a36386dc 2024-04-25)",
+  "toolchain": "rustc 1.81.0-nightly (cf2df68d1 2024-07-01)",
   "authors": [],
   "repository": null,
   "homepage": null,
@@ -304,6 +304,11 @@
   ],
   "errors": [
     {
+      "name": "AlreadyClaimed",
+      "description": "",
+      "discriminant": 61402
+    },
+    {
       "name": "AlreadyInitialized",
       "description": "This contract instance cannot be initialized again.",
       "discriminant": 60015
@@ -332,6 +337,11 @@
       "name": "InsufficientAllowance",
       "description": "Spender does not have enough allowance approved.",
       "discriminant": 60002
+    },
+    {
+      "name": "InsufficientBalance",
+      "description": "",
+      "discriminant": 61406
     },
     {
       "name": "InsufficientBalance",
@@ -389,6 +399,11 @@
       "discriminant": 60016
     },
     {
+      "name": "MisconfiguredValidator",
+      "description": "",
+      "discriminant": 61407
+    },
+    {
       "name": "MissingEventsMode",
       "description": "The event mode required was not specified.",
       "discriminant": 60007
@@ -397,6 +412,21 @@
       "name": "MissingRole",
       "description": "The role is missing.",
       "discriminant": 20003
+    },
+    {
+      "name": "NotAnOwner",
+      "description": "",
+      "discriminant": 61405
+    },
+    {
+      "name": "NotAnOwnerOfAClaim",
+      "description": "",
+      "discriminant": 61403
+    },
+    {
+      "name": "NotYetClaimable",
+      "description": "",
+      "discriminant": 61401
     },
     {
       "name": "Overflow",
@@ -429,6 +459,11 @@
       "discriminant": 20004
     },
     {
+      "name": "UnstakeNotFound",
+      "description": "",
+      "discriminant": 61404
+    },
+    {
       "name": "_MissingPackageHashForUpgrade",
       "description": "The package hash for the upgrade is missing.",
       "discriminant": 60019
@@ -450,9 +485,75 @@
       "is_mutable": true,
       "arguments": [
         {
-          "name": "amount",
+          "name": "scspr_amount",
           "description": null,
           "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "U32",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "claim",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "receipt_id",
+          "description": null,
+          "ty": "U32",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "staked_cspr",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U512",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "add_to_the_pool",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "remove_from_the_pool",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U512",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "withdraw_from_the_pool",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U512",
           "optional": false
         }
       ],
@@ -867,6 +968,18 @@
         "name": "odra_cfg_is_upgradable",
         "description": "The arg name for the contract upgradeability setting.",
         "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "validator_address",
+        "description": null,
+        "ty": "PublicKey",
+        "optional": false
+      },
+      {
+        "name": "claim_time",
+        "description": null,
+        "ty": "U64",
         "optional": false
       }
     ]

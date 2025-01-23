@@ -6,4 +6,5 @@ Cargo.lock
 .builder*
 /wasm
 liquid-staking-contracts/wasm
-.env
+**/.DS_Store
+.env*

@@ -20,6 +20,29 @@ pub enum Error {
     MisconfiguredValidator = 61407,
 }
 
+#[odra::event]
+pub struct Staked {
+    address: Address,
+    cspr_amount: U512,
+    scspr_minted: U256,
+}
+
+#[odra::event]
+pub struct Unstaked {
+    address: Address,
+    cspr_amount: U512,
+    scspr_burned: U256,
+    unstake_id: u32,
+    claim_time: u64,
+}
+
+#[odra::event]
+pub struct Claimed {
+    address: Address,
+    cspr_amount: U512,
+    unstake_id: u32,
+}
+
 #[odra::module(
     errors = Error
 )]
@@ -109,6 +132,12 @@ impl StakedCSPR {
             cspr_amount,
         );
         self.token.raw_mint(&caller, &scspr_amount);
+
+        self.env().emit_event(Staked {
+            address: caller,
+            cspr_amount,
+            scspr_minted: scspr_amount,
+        });
     }
 
     pub fn unstake(&mut self, scspr_amount: U256) -> u32 {
@@ -134,20 +163,30 @@ impl StakedCSPR {
             unstake_id: new_unstake_id,
             owner: caller,
             cspr_amount,
-            claimable_from: self.claim_time(),
+            claimable_from: self.next_claim_time(),
             claimed: false,
         });
 
+        // FIXME: unstake_ids per user can potentially overflow.
         self.unstake_ids.set(&caller, account_unstake_ids);
         self.unclaimed_cspr
             .set(self.unclaimed_cspr.get().unwrap_or_default() + cspr_amount);
+
+        self.env().emit_event(Unstaked {
+            address: caller,
+            cspr_amount,
+            scspr_burned: scspr_amount,
+            unstake_id: new_unstake_id,
+            claim_time: self.next_claim_time(),
+        });
+
         new_unstake_id
     }
 
-    pub fn claim(&mut self, receipt_id: u32) {
+    pub fn claim(&mut self, unstake_id: u32) {
         let mut unstake = self
             .unstakes
-            .get(receipt_id)
+            .get(unstake_id)
             .unwrap_or_revert_with(self, UnstakeNotFound);
         if unstake.claimable_from > self.env().get_block_time() {
             self.env().revert(NotYetClaimable);
@@ -160,12 +199,19 @@ impl StakedCSPR {
             self.env().revert(NotAnOwnerOfAClaim);
         }
 
+        let cspr_amount = unstake.cspr_amount;
         self.env()
-            .transfer_tokens(&unstake.owner, &unstake.cspr_amount);
+            .transfer_tokens(&unstake.owner, &cspr_amount);
         unstake.claimed = true;
         self.unclaimed_cspr
-            .set(self.unclaimed_cspr.get().unwrap_or_default() - unstake.cspr_amount);
-        self.unstakes.replace(receipt_id, unstake);
+            .set(self.unclaimed_cspr.get().unwrap_or_default() - cspr_amount);
+        self.unstakes.replace(unstake_id, unstake);
+
+        self.env().emit_event(Claimed {
+            address: caller,
+            cspr_amount,
+            unstake_id,
+        });
     }
 
     pub fn staked_cspr(&self) -> U512 {
@@ -212,10 +258,13 @@ impl StakedCSPR {
 }
 
 impl StakedCSPR {
-    pub fn claim_time(&self) -> u64 {
-        self.claim_time.get().unwrap_or_default()
+    pub fn next_claim_time(&self) -> u64 {
+        let now = self.env().get_block_time();
+        let claim_time = self.claim_time.get().unwrap_or_default();
+        now + claim_time
     }
 
+    // TODO: Cover with tests at U256 and U512 boundaries.
     pub fn cspr_to_scspr(&self, cspr_stake: U512) -> U256 {
         let staked_cspr = self.staked_cspr();
         if staked_cspr.is_zero() {
