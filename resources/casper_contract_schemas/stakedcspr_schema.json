@@ -50,6 +50,29 @@
     },
     {
       "struct": {
+        "name": "Claimed",
+        "description": null,
+        "members": [
+          {
+            "name": "address",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "cspr_amount",
+            "description": null,
+            "ty": "U512"
+          },
+          {
+            "name": "unstake_id",
+            "description": null,
+            "ty": "U32"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
         "name": "DecreaseAllowance",
         "description": null,
         "members": [
@@ -226,6 +249,29 @@
     },
     {
       "struct": {
+        "name": "Staked",
+        "description": null,
+        "members": [
+          {
+            "name": "address",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "cspr_amount",
+            "description": null,
+            "ty": "U512"
+          },
+          {
+            "name": "scspr_minted",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
         "name": "Transfer",
         "description": null,
         "members": [
@@ -271,6 +317,39 @@
             "name": "amount",
             "description": null,
             "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Unstaked",
+        "description": null,
+        "members": [
+          {
+            "name": "address",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "cspr_amount",
+            "description": null,
+            "ty": "U512"
+          },
+          {
+            "name": "scspr_burned",
+            "description": null,
+            "ty": "U256"
+          },
+          {
+            "name": "unstake_id",
+            "description": null,
+            "ty": "U32"
+          },
+          {
+            "name": "claim_time",
+            "description": null,
+            "ty": "U64"
           }
         ]
       }
@@ -501,7 +580,7 @@
       "is_mutable": true,
       "arguments": [
         {
-          "name": "receipt_id",
+          "name": "unstake_id",
           "description": null,
           "ty": "U32",
           "optional": false
@@ -912,6 +991,10 @@
       "ty": "ChangeSecurity"
     },
     {
+      "name": "Claimed",
+      "ty": "Claimed"
+    },
+    {
       "name": "DecreaseAllowance",
       "ty": "DecreaseAllowance"
     },
@@ -940,12 +1023,20 @@
       "ty": "SetAllowance"
     },
     {
+      "name": "Staked",
+      "ty": "Staked"
+    },
+    {
       "name": "Transfer",
       "ty": "Transfer"
     },
     {
       "name": "TransferFrom",
       "ty": "TransferFrom"
+    },
+    {
+      "name": "Unstaked",
+      "ty": "Unstaked"
     }
   ],
   "call": {

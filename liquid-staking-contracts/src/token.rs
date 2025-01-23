@@ -44,6 +44,7 @@ pub struct Claimed {
 }
 
 #[odra::module(
+    events = [Staked, Unstaked, Claimed],
     errors = Error
 )]
 pub struct StakedCSPR {
