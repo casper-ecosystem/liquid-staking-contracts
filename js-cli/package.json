@@ -6,7 +6,8 @@
   "scripts": {
     "scripts:install_staking": "ts-node install_staking.ts",
     "scripts:stake": "ts-node stake.ts",
-    "scripts:unstake": "ts-node unstake.ts"
+    "scripts:unstake": "ts-node unstake.ts",
+    "scripts:claim": "ts-node claim.ts"
   },
   "keywords": [],
   "author": "David Hernando <david.hernando@makes.services>",
