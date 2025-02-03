@@ -40,6 +40,6 @@ impl BDDEnv {
     }
 
     pub fn advance_with_rewards(&mut self) {
-        self.env.advance_with_rewards(self.env.era_length() * 10);
+        self.env.advance_with_auctions(self.env.auction_delay());
     }
 }

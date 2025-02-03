@@ -31,3 +31,7 @@ test = false
 [[test]]
 name = "test_staking"
 harness = false
+
+[[test]]
+name = "test_pool"
+harness = false

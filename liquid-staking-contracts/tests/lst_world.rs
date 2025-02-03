@@ -20,7 +20,7 @@ impl Default for LSTWorld {
             env.env(),
             StakedCSPRInitArgs {
                 validator_address,
-                claim_time: env.env().era_length() * 7,
+                claim_time: env.env().auction_delay() * 8,
             },
         );
         Self { env, token }

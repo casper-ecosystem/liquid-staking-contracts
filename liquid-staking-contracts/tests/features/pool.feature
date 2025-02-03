@@ -5,3 +5,9 @@ Feature: Rewards pool
     Then 100 CSPR is staked
     When Owner removes 50 CSPR from the pool
     Then 50 CSPR is staked
+
+  Scenario: Check basic staking
+    Given Alice has 200000000 CSPR
+    When Alice stakes 200000000 CSPR
+    And 1 auction passes
+    Then more than 200000000 CSPR is staked

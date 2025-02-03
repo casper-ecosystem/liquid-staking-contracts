@@ -14,7 +14,7 @@ impl odra_cli::deploy::DeployScript for DeployScript {
             &env,
             StakedCSPRInitArgs {
                 validator_address: env.get_validator(),
-                claim_time: env.era_length() * 7,
+                claim_time: env.auction_delay() * 8,
             },
         )?;
         container.add_contract(&token)?;
