@@ -34,3 +34,8 @@ fn check_more_than_scspr_balance(
 ) {
     assert!(world.token.balance_of(&world.env.get_address(&account)) > scspr_amount.as_u256());
 }
+
+#[then(expr = "{token_amount} sCSPR is in the pool")]
+fn check_pool_balance(world: &mut LSTWorld, scspr_amount: TokenAmount) {
+    assert_eq!(scspr_amount, TokenAmount::from(world.token.total_supply()));
+}
