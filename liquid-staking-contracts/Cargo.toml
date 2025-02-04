@@ -35,3 +35,7 @@ harness = false
 [[test]]
 name = "test_pool"
 harness = false
+
+[[test]]
+name = "test_fee"
+harness = false

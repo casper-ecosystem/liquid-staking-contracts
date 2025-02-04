@@ -15,3 +15,10 @@ fn advance_auctions(world: &mut LSTWorld, auctions: u32) {
     let advance = auctions * era_time * 8;
     world.env.env().advance_with_auctions(advance.into());
 }
+
+#[when(expr = "unbonding period passes")]
+fn advance_unbonding_period(world: &mut LSTWorld) {
+    let auction_delay = world.env.env().auction_delay() as u32;
+    let advance = auction_delay * 8;
+    world.env.env().advance_with_auctions(advance.into());
+}

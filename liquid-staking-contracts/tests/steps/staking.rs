@@ -16,6 +16,13 @@ fn unstake_cspr(world: &mut LSTWorld, account: Account, token_amount: TokenAmoun
     world.token.unstake(*token_amount);
 }
 
+#[when(expr = "{account} unstakes everything")]
+fn unstake_everything(world: &mut LSTWorld, account: Account) {
+    world.env.set_caller(&account);
+    let total_stake = world.token.balance_of(&world.env.get_address(&account));
+    world.token.unstake(total_stake);
+}
+
 #[when(expr = "{account} claims unstake with id {int}")]
 fn claim_unstake(world: &mut LSTWorld, account: Account, unstake_id: u32) {
     world.env.set_caller(&account);

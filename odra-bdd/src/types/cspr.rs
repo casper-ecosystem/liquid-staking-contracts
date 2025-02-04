@@ -5,7 +5,7 @@ use odra::casper_types::U512;
 use std::ops::Deref;
 use std::str::FromStr;
 
-#[derive(Parameter, Debug, PartialEq, Clone, Copy)]
+#[derive(Parameter, Debug, PartialEq, Clone, Copy, PartialOrd)]
 #[param(regex = r"\d+", name = "cspr_amount")]
 pub struct CSPRAmount {
     amount: U512,
