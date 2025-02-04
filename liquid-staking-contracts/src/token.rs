@@ -4,7 +4,7 @@ use odra::{
     prelude::*,
 };
 use odra_modules::{
-    access::{AccessControl, Role, DEFAULT_ADMIN_ROLE},
+    access::{AccessControl, Ownable, Role, DEFAULT_ADMIN_ROLE},
     cep18::{errors::Error as Cep18Error, utils::Cep18Modality},
     cep18_token::Cep18,
 };
@@ -49,12 +49,15 @@ pub struct Claimed {
 )]
 pub struct StakedCSPR {
     access_control: SubModule<AccessControl>,
+    ownable: SubModule<Ownable>,
     token: SubModule<Cep18>,
     unstake_ids: Mapping<Address, Vec<u32>>,
     unstakes: List<Unstake>,
     unclaimed_cspr: Var<U512>,
     validator_address: Var<PublicKey>,
     claim_time: Var<u64>,
+    last_recorded_delegated_amount: Var<U512>,
+    fee_percentage: Var<U512>,
 }
 
 #[odra::odra_type]
@@ -98,12 +101,13 @@ impl StakedCSPR {
         }
     }
 
-    pub fn init(&mut self, validator_address: PublicKey, claim_time: u64) {
+    pub fn init(&mut self, validator_address: PublicKey, claim_time: u64, fee_percentage: U512) {
         let admin = self.env().caller();
 
         // Grant the admin role to the deployer.
         self.access_control
             .unchecked_grant_role(&DEFAULT_ADMIN_ROLE, &admin);
+        self.ownable.init();
 
         // Initialize the validator address.
         self.validator_address.set(validator_address);
@@ -119,10 +123,14 @@ impl StakedCSPR {
             vec![],
             Some(Cep18Modality::None),
         );
+
+        self.fee_percentage.set(fee_percentage);
+        self.last_recorded_delegated_amount.set(U512::zero());
     }
 
     #[odra(payable)]
     pub fn stake(&mut self) {
+        self.collect_fee();
         let caller = self.env().caller();
         let cspr_amount = self.env().attached_value();
         let scspr_amount = self.cspr_to_scspr(cspr_amount);
@@ -139,9 +147,11 @@ impl StakedCSPR {
             cspr_amount,
             scspr_minted: scspr_amount,
         });
+        self.last_recorded_delegated_amount.set(self.staked_cspr());
     }
 
     pub fn unstake(&mut self, scspr_amount: U256) -> u32 {
+        self.collect_fee();
         let caller = self.env().caller();
         if self.token.balance_of(&caller) < scspr_amount {
             self.env().revert(Cep18Error::InsufficientBalance);
@@ -180,6 +190,8 @@ impl StakedCSPR {
             unstake_id: new_unstake_id,
             claim_time: self.next_claim_time(),
         });
+
+        self.last_recorded_delegated_amount.set(self.staked_cspr());
 
         new_unstake_id
     }
@@ -224,21 +236,25 @@ impl StakedCSPR {
 
     #[odra(payable)]
     pub fn add_to_the_pool(&mut self) {
+        self.collect_fee();
         self.env().delegate(
             self.validator_address
                 .get()
                 .unwrap_or_revert_with(self, MisconfiguredValidator),
             self.env().attached_value(),
         );
+        self.last_recorded_delegated_amount.set(self.staked_cspr());
     }
 
     pub fn remove_from_the_pool(&mut self, amount: U512) {
+        self.collect_fee();
         self.env().undelegate(
             self.validator_address
                 .get()
                 .unwrap_or_revert_with(self, MisconfiguredValidator),
             amount,
         );
+        self.last_recorded_delegated_amount.set(self.staked_cspr());
     }
 
     pub fn withdraw_from_the_pool(&mut self, amount: U512) {
@@ -254,6 +270,19 @@ impl StakedCSPR {
         }
 
         self.env().transfer_tokens(&self.env().caller(), &amount);
+    }
+
+    pub fn state_report(&self) -> String {
+        format!(
+            "Staked CSPR: {} Unclaimed CSPR: {}, Admin sCSPR: {}",
+            self.staked_cspr(),
+            self.unclaimed_cspr.get().unwrap_or_default(),
+            self.token.balance_of(&self.ownable.get_owner())
+        )
+    }
+
+    pub fn collect(&mut self) {
+        self.collect_fee();
     }
 }
 
@@ -286,6 +315,43 @@ impl StakedCSPR {
 
         u256_to_u512(scspr) * staked_cspr / scspr_total_supply
     }
+
+    /// Calculates the rewards since last collection and mints the fee in the form of
+    /// sCSPR to the admin.
+    fn collect_fee(&mut self) {
+        let current_delegated = self.staked_cspr();
+        let last_recorded = self
+            .last_recorded_delegated_amount
+            .get()
+            .unwrap_or_default();
+
+        // First time delegation, set the last recorded delegation and bail, as there is no reward
+        if last_recorded.is_zero() {
+            self.last_recorded_delegated_amount.set(current_delegated);
+            return;
+        }
+
+        // Only calculate rewards if delegation has increased.
+        if current_delegated > last_recorded {
+            let reward = current_delegated - last_recorded;
+            let fee_percent = self.fee_percentage.get().unwrap_or_default();
+            // Fee calculation: fee = reward * fee_percentage / 10000 (basis points)
+            let fee = reward * fee_percent / U512::from(10000u64);
+            // Calculate fee_scspr based on total staked amount of cspr and total liquidity of scspr
+            let total_staked_cspr = self.staked_cspr();
+            let total_scspr_liquidity = u256_to_u512(self.token.total_supply());
+            let fee_scspr = if total_staked_cspr.is_zero() || total_scspr_liquidity.is_zero() {
+                U256::zero()
+            } else {
+                u512_to_u256(fee * total_scspr_liquidity / total_staked_cspr)
+            };
+            // Mint sCSPR to admin (using the deployer/admin stored in DEFAULT_ADMIN_ROLE)
+            let admin = self.ownable.get_owner();
+            self.token.raw_mint(&admin, &fee_scspr);
+            // Update the last recorded delegation.
+            self.last_recorded_delegated_amount.set(current_delegated);
+        }
+    }
 }
 
 fn u512_to_u256(value: U512) -> U256 {
@@ -310,9 +376,51 @@ mod tests {
             StakedCSPRInitArgs {
                 validator_address: env.get_validator(),
                 claim_time: env.auction_delay() * 8,
+                fee_percentage: 1000.into(),
             },
         );
         assert!(token.has_role(&DEFAULT_ADMIN_ROLE, &env.caller()));
+    }
+
+    #[test]
+    fn test_fee_collection() {
+        let env = odra_test::env();
+        let auction_delay = env.auction_delay();
+        let unbonding_delay = auction_delay * 8;
+        let mut token = StakedCSPR::deploy(
+            &env,
+            StakedCSPRInitArgs {
+                validator_address: env.get_validator(),
+                claim_time: env.auction_delay() * 8,
+                fee_percentage: 100.into(),
+            },
+        );
+        // Given Alice and Bob.
+        let alice = env.get_account(1);
+        let bob = env.get_account(2);
+        let admin = env.get_account(0);
+        let alice_initial_cspr_balance = env.balance_of(&alice);
+        let bob_initial_cspr_balance = env.balance_of(&bob);
+
+        // When Alice stakes 10 CSPR.
+        let deposit_amount_u512 = U512::from(10_000_000_000u64);
+        let deposit_amount_u256 = U256::from(10_000_000_000u64);
+        env.set_caller(alice);
+        token.with_tokens(deposit_amount_u512).stake();
+
+        // And some time passes
+        env.advance_with_auctions(auction_delay * 8);
+
+        // And Bob stakes 10 CSPR.
+        env.set_caller(bob);
+        token.with_tokens(deposit_amount_u512).stake();
+
+        // 8 Eras generated 3999 CSPR rewards
+        // 3999 * 100 / 10000 = 39 CSPR fee
+        // (10_000_000_000 / 10_000_003_999) * 39 = 38 sCSPR
+
+        // Then Admin has 38 sCSPR
+        assert_eq!(token.balance_of(&admin), U256::from(38u64));
     }
 
     #[test]
@@ -326,6 +434,7 @@ mod tests {
             StakedCSPRInitArgs {
                 validator_address: env.get_validator(),
                 claim_time: env.auction_delay() * 8,
+                fee_percentage: 1000.into(),
             },
         );
 

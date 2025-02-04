@@ -1,5 +1,6 @@
 use cucumber::World;
 use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRHostRef, StakedCSPRInitArgs};
+use odra::casper_types::U256;
 use odra::host::Deployer;
 use odra_bdd::bdd_env::BDDEnv;
 use odra_bdd::types::u256::U256Param;
@@ -21,6 +22,7 @@ impl Default for LSTWorld {
             StakedCSPRInitArgs {
                 validator_address,
                 claim_time: env.env().auction_delay() * 8,
+                fee_percentage: 1000.into(),
             },
         );
         Self { env, token }

@@ -25,3 +25,12 @@ fn get_token_balance(world: &mut LSTWorld, account: Account, token_amount: Token
 fn check_more_than_cspr_balance(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
     assert!(world.env.get_balance(&account) > cspr_amount);
 }
+
+#[then(expr = "{account} has more than {token_amount} sCSPR")]
+fn check_more_than_scspr_balance(
+    world: &mut LSTWorld,
+    account: Account,
+    scspr_amount: TokenAmount,
+) {
+    assert!(world.token.balance_of(&world.env.get_address(&account)) > scspr_amount.as_u256());
+}

@@ -9,4 +9,4 @@ Feature: Administration fees
     And unbonding period passes
     And Alice claims unstake with id 0
     Then Alice has more than 200000000 CSPR
-    And Owner has more than 0 CSPR
+    And Owner has more than 0 sCSPR
