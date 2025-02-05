@@ -13,7 +13,7 @@ impl odra_cli::deploy::DeployScript for DeployScript {
         let token = StakedCSPR::try_deploy(
             &env,
             StakedCSPRInitArgs {
-                validator_address: env.get_validator(),
+                validator_address: env.get_validator(0),
                 claim_time: env.auction_delay() * 8,
                 fee_percentage: 1000.into(),
             },

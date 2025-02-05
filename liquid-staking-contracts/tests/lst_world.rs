@@ -15,7 +15,7 @@ pub struct LSTWorld {
 impl Default for LSTWorld {
     fn default() -> Self {
         let env = BDDEnv::new(odra_test::env());
-        let validator_address = env.env().get_validator();
+        let validator_address = env.env().get_validator(0);
         let token = StakedCSPR::deploy(
             env.env(),
             StakedCSPRInitArgs {
