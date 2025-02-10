@@ -11,8 +11,8 @@ fn advance_eras(world: &mut LSTWorld, eras: u32) {
 #[when(expr = "{int} auctions pass")]
 #[when(expr = "{int} auction passes")]
 fn advance_auctions(world: &mut LSTWorld, auctions: u32) {
-    let era_time = world.env.env().auction_delay() as u32;
-    let advance = auctions * era_time * 8;
+    let auction_delay = world.env.env().auction_delay() as u32;
+    let advance = auctions * auction_delay;
     world.env.env().advance_with_auctions(advance.into());
 }
 

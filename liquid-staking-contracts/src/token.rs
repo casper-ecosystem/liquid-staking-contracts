@@ -286,6 +286,12 @@ impl StakedCSPR {
 
     /// Used as a helper for testing
     /// TODO: Remove before production
+    pub fn self_balance(&self) -> U512 {
+        self.env().self_balance()
+    }
+
+    /// Used as a helper for testing
+    /// TODO: Remove before production
     pub fn collect(&mut self) {
         self.collect_fee();
     }
@@ -449,6 +455,8 @@ fn u256_to_u512(value: U256) -> U512 {
 #[cfg(test)]
 mod tests {
     use odra::host::{Deployer, HostRef};
+    use std::fs::File;
+    use std::io::Write;
 
     use super::*;
 
@@ -470,7 +478,7 @@ mod tests {
     fn test_fee_collection() {
         let env = odra_test::env();
         let auction_delay = env.auction_delay();
-        let mut token = StakedCSPR::deploy(
+        let token = StakedCSPR::deploy(
             &env,
             StakedCSPRInitArgs {
                 validator_address: env.get_validator(0),
@@ -489,23 +497,132 @@ mod tests {
         token.with_tokens(deposit_amount_u512).stake();
 
         // And some time passes
-        env.advance_with_auctions(auction_delay * 50);
+        // First auction is for the delay to kick in the staking
+        env.advance_with_auctions(auction_delay * 2);
 
         // And Bob stakes 10 CSPR.
         env.set_caller(bob);
         token.with_tokens(deposit_amount_u512).stake();
 
         // TODO: FIX The math
-        // 12 Eras generated 999 CSPR rewards for our validator
+        // 1 Era generated 999 CSPR rewards for our validator
         // 999 * 100 / 10000 = 9 CSPR fee
         // (10_000_000_000 / 10_000_000_999) * 9 = 8 sCSPR
 
         // Then Admin has 8 sCSPR
-        assert_eq!(token.balance_of(&admin), U256::from(43u64));
+        assert_eq!(token.balance_of(&admin), U256::from(8u64));
     }
 
     #[test]
     fn test_staking() {
+        let env = odra_test::env();
+        let auction_delay = env.auction_delay();
+        let unbonding_delay = auction_delay * 8;
+
+        // Setup accounts
+        let alice = env.get_account(1);
+        let bob = env.get_account(2);
+        let admin = env.get_account(0);
+        let alice_initial_cspr_balance = env.balance_of(&alice);
+
+        let mut token = StakedCSPR::deploy(
+            &env,
+            StakedCSPRInitArgs {
+                validator_address: env.get_validator(0),
+                claim_time: env.auction_delay() * 8,
+                fee_percentage: 1000.into(),
+            },
+        );
+
+        // Create and initialize CSV file
+        let mut file = File::create("staking_report.csv").unwrap();
+        writeln!(
+            file,
+            "step,auction_delays,total_scspr,alice_scspr,bob_scspr,admin_scspr,alice_cspr,bob_cspr,admin_cspr,contract_cspr,delegated"
+        ).unwrap();
+
+        // Track number of auction delays
+        let mut total_delays = 0u64;
+
+        // Helper function to write state
+        let write_state = |file: &mut File, step: &str, token: &StakedCSPRHostRef, delays: u64| {
+            return;
+            // NOTE: to get report, uncomment this
+            // let total_scspr = token.total_supply();
+            // let alice_scspr = token.balance_of(&alice);
+            // let bob_scspr = token.balance_of(&bob);
+            // let admin_scspr = token.balance_of(&admin);
+
+            // let alice_cspr = env.balance_of(&alice);
+            // let bob_cspr = env.balance_of(&bob);
+            // let admin_cspr = env.balance_of(&admin);
+            // let contract_cspr = token.self_balance();
+
+            // let delegated = token.staked_cspr();
+
+            // writeln!(
+            //     file,
+            //     "{},{},{},{},{},{},{},{},{},{},{}",
+            //     step,
+            //     delays,
+            //     total_scspr,
+            //     alice_scspr,
+            //     bob_scspr,
+            //     admin_scspr,
+            //     alice_cspr,
+            //     bob_cspr,
+            //     admin_cspr,
+            //     contract_cspr,
+            //     delegated
+            // ).unwrap();
+        };
+
+        // Initial state
+        write_state(&mut file, "initial", &token, total_delays);
+
+        // When Alice stakes 10 CSPR
+        let deposit_amount_u512 = U512::from(10_000_000_000u64);
+        let deposit_amount_u256 = U256::from(10_000_000_000u64);
+        env.set_caller(alice);
+        token.with_tokens(deposit_amount_u512).stake();
+
+        write_state(&mut file, "after_alice_stake", &token, total_delays);
+
+        // After time passes
+        total_delays += 2;
+        env.advance_with_auctions(auction_delay * 2);
+        write_state(&mut file, "after_delay", &token, total_delays);
+
+        // When Alice unstakes
+        token.unstake(deposit_amount_u256);
+        write_state(&mut file, "after_alice_unstake", &token, total_delays);
+
+        // And one auction passes
+        total_delays += 1;
+        env.advance_with_auctions(auction_delay);
+        write_state(&mut file, "after_one_auction", &token, total_delays);
+
+        // After unbonding delay
+        total_delays += 7;
+        env.advance_with_auctions(auction_delay * 7);
+        write_state(&mut file, "after_unbonding", &token, total_delays);
+
+        // After Alice claims
+        token.claim(0);
+        write_state(&mut file, "after_alice_claim", &token, total_delays);
+
+        // Verify final state
+        assert_eq!(token.balance_of(&admin), U256::from(98));
+        assert_eq!(token.staked_cspr(), U512::from(1098));
+        assert_eq!(token.total_supply(), U256::from(98));
+        assert_eq!(
+            env.balance_of(&alice),
+            alice_initial_cspr_balance + U512::from(999) - U512::from(99)
+        );
+    }
+
+    #[test]
+    fn test_scspr_transfer() {
         // Given a deployed StakedCSPR contract.
         let env = odra_test::env();
         let auction_delay = env.auction_delay();
@@ -523,6 +640,7 @@ mod tests {
         let alice = env.get_account(1);
         let bob = env.get_account(2);
         let alice_initial_cspr_balance = env.balance_of(&alice);
+        let bob_initial_cspr_balance = env.balance_of(&bob);
 
         // When Alice stakes 10 CSPR.
         let deposit_amount_u512 = U512::from(10_000_000_000u64);
@@ -544,6 +662,9 @@ mod tests {
         env.set_caller(alice);
         token.transfer(&bob, &deposit_amount_u256);
 
+        // When time passes
+        env.advance_with_auctions(auction_delay);
+
         // When Bob unstakes 10 sCSPR.
         env.set_caller(bob);
         token.unstake(deposit_amount_u256);
@@ -559,8 +680,8 @@ mod tests {
         token.claim(0);
 
         // // Then Bob's CSPR balance should be 10 CSPR more.
-        // let expected_amount = bob_initial_cspr_balance + deposit_amount_u512;
-        // assert_eq!(env.balance_of(&bob), expected_amount);
+        let expected_amount = bob_initial_cspr_balance + deposit_amount_u512;
+        assert_eq!(env.balance_of(&bob), expected_amount);
     }
 
     #[test]

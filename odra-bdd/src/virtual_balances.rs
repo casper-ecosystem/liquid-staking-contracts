@@ -27,7 +27,7 @@ impl VirtualBalances {
         self.current.insert(*address, amount);
 
         self.initial
-            .insert(*address, CSPRAmount::new(self.env.balance_of(address)));
+            .insert(*address, CSPRAmount::new(self.env.balance_of(address), 9));
     }
 
     pub fn get(&self, address: &Address) -> CSPRAmount {
@@ -37,7 +37,7 @@ impl VirtualBalances {
         let result = balance
             .checked_sub(self.initial.get(&address).unwrap().amount())
             .unwrap();
-        CSPRAmount::new(result)
+        CSPRAmount::new(result, 9)
     }
 
     pub fn set_cspr_balance(&mut self, account: &Address, amount: CSPRAmount) {

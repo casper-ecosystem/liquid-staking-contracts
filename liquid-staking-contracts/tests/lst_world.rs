@@ -2,9 +2,6 @@ use cucumber::World;
 use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRHostRef, StakedCSPRInitArgs};
 use odra::host::Deployer;
 use odra_bdd::bdd_env::BDDEnv;
-use odra_bdd::types::u256::U256Param;
-
-pub type TokenAmount = U256Param<9>;
 
 #[derive(World)]
 pub struct LSTWorld {
