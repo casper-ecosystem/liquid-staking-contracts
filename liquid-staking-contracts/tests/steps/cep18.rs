@@ -1,6 +1,6 @@
-use crate::lst_world::LSTWorld;
+use crate::lst_world::{LSTWorld, StakedCSPRAmount};
 use cucumber::then;
-use odra_bdd::types::{account::Account, token_amount::TokenAmount};
+use odra_bdd::types::account::Account;
 
 #[then(expr = "name is {string}")]
 fn check_name(world: &mut LSTWorld, name: String) {
@@ -17,15 +17,15 @@ fn check_decimals(world: &mut LSTWorld, decimals: u8) {
     assert_eq!(world.token.decimals(), decimals);
 }
 
-#[then(expr = "total supply is {token_amount} sCSPR")]
-fn check_total_supply(world: &mut LSTWorld, expected_total_supply: TokenAmount) {
-    let total_supply = TokenAmount::from(world.token.total_supply());
+#[then(expr = "total supply is {scspr} sCSPR")]
+fn check_total_supply(world: &mut LSTWorld, expected_total_supply: StakedCSPRAmount) {
+    let total_supply = StakedCSPRAmount::from(world.token.total_supply());
     assert_eq!(total_supply, expected_total_supply);
 }
 
-#[then(expr = "{account} token balance is {token_amount} sCSPR")]
-#[then(expr = "{account}'s token balance is {token_amount} sCSPR")]
-fn check_token_balance(world: &mut LSTWorld, account: Account, expected_balance: TokenAmount) {
-    let balance = TokenAmount::from(world.token.balance_of(&world.env.get_address(&account)));
+#[then(expr = "{account} token balance is {scspr} sCSPR")]
+#[then(expr = "{account}'s token balance is {scspr} sCSPR")]
+fn check_token_balance(world: &mut LSTWorld, account: Account, expected_balance: StakedCSPRAmount) {
+    let balance = StakedCSPRAmount::from(world.token.balance_of(&world.env.get_address(&account)));
     assert_eq!(balance, expected_balance);
 }

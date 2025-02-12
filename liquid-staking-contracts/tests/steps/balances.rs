@@ -1,8 +1,7 @@
-use crate::lst_world::LSTWorld;
+use crate::lst_world::{LSTWorld, StakedCSPRAmount};
 use cucumber::{given, then};
 use odra_bdd::types::account::Account;
 use odra_bdd::types::cspr::CSPRAmount;
-use odra_bdd::types::token_amount::TokenAmount;
 
 #[given(expr = "{account} has {cspr_amount} CSPR")]
 fn set_cspr_balance(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
@@ -15,11 +14,11 @@ fn get_cspr_balance(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmo
     assert_eq!(cspr_amount, world.env.get_balance(&account));
 }
 
-#[then(expr = "{account} has {token_amount} sCSPR")]
-#[then(expr = "{account}'s sCSPR balance is {token_amount}")]
-fn get_token_balance(world: &mut LSTWorld, account: Account, token_amount: TokenAmount) {
+#[then(expr = "{account} has {scspr} sCSPR")]
+#[then(expr = "{account}'s sCSPR balance is {scspr}")]
+fn get_token_balance(world: &mut LSTWorld, account: Account, scspr: StakedCSPRAmount) {
     let actual = world.token.balance_of(&world.env.get_address(&account));
-    assert_eq!(token_amount, TokenAmount::from(actual));
+    assert_eq!(scspr.amount(), actual);
 }
 
 #[then(expr = "{account} has more than {cspr_amount} CSPR")]
@@ -27,18 +26,14 @@ fn check_more_than_cspr_balance(world: &mut LSTWorld, account: Account, cspr_amo
     assert!(world.env.get_balance(&account) > cspr_amount);
 }
 
-#[then(expr = "{account} has more than {token_amount} sCSPR")]
-fn check_more_than_scspr_balance(
-    world: &mut LSTWorld,
-    account: Account,
-    scspr_amount: TokenAmount,
-) {
-    assert!(world.token.balance_of(&world.env.get_address(&account)) > scspr_amount.amount());
+#[then(expr = "{account} has more than {scspr} sCSPR")]
+fn check_more_than_scspr_balance(world: &mut LSTWorld, account: Account, scspr: StakedCSPRAmount) {
+    assert!(world.token.balance_of(&world.env.get_address(&account)) > scspr.amount());
 }
 
-#[then(expr = "{token_amount} sCSPR is in the pool")]
-fn check_pool_balance(world: &mut LSTWorld, scspr_amount: TokenAmount) {
-    assert_eq!(scspr_amount, TokenAmount::from(world.token.total_supply()));
+#[then(expr = "{scspr} sCSPR is in the pool")]
+fn check_pool_balance(world: &mut LSTWorld, scspr: StakedCSPRAmount) {
+    assert_eq!(scspr.amount(), world.token.total_supply());
 }
 
 #[then(expr = "staked CSPR is {cspr_amount} CSPR")]

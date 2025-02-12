@@ -47,4 +47,4 @@ Feature: Administration fees
     And Owner claims unstake with id 1
     Then Owner has 0.0001 CSPR
     And 0.00000099 CSPR is staked
-    And 0.0000009 sCSPR is in the pool
+    And 0.000000908 sCSPR is in the pool

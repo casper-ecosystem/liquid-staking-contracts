@@ -9,8 +9,8 @@ odra-modules.workspace = true
 
 [dev-dependencies]
 odra-test.workspace = true
+odra-bdd.workspace = true
 cucumber.workspace = true
-odra-bdd = { path = "../odra-bdd" }
 
 [build-dependencies]
 odra-build.workspace = true
