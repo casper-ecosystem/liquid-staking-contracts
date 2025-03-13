@@ -107,7 +107,7 @@ impl StakedCSPR {
         // Grant the admin role to the deployer.
         self.access_control
             .unchecked_grant_role(&DEFAULT_ADMIN_ROLE, &admin);
-        self.ownable.init();
+        self.ownable.init(admin);
 
         // Initialize the validator address.
         self.validators.set(vec![validator_address]);
@@ -305,11 +305,27 @@ impl StakedCSPR {
         }
 
         let mut validators = self.validators.get().unwrap_or_default();
+        // TODO: check if there is a validator with the same key
         validators.push(public_key);
         self.validators.set(validators);
     }
 
-    pub fn validators(&self) -> Vec<PublicKey> {
+    pub fn remove_validator(&mut self, public_key: PublicKey) {
+        if !self
+            .access_control
+            .has_role(&DEFAULT_ADMIN_ROLE, &self.env().caller())
+        {
+            self.env().revert(NotAnOwner);
+        }
+
+        // TODO: Handle validator's pool
+
+        let mut validators = self.validators.get().unwrap_or_default();
+        validators.remove(validators.iter().position(|v| v == &public_key).unwrap());
+        self.validators.set(validators);
+    }
+
+    pub fn get_validators(&self) -> Vec<PublicKey> {
         self.validators.get().unwrap_or_default()
     }
 }
@@ -454,11 +470,79 @@ fn u256_to_u512(value: U256) -> U512 {
 
 #[cfg(test)]
 mod tests {
-    use odra::host::{Deployer, HostRef};
-    use std::fs::File;
-    use std::io::Write;
+    // Add this at the beginning of the tests module
+    #[cfg(test)]
+    mod state_writer {
+        use super::*;
+        pub trait StateWriter {
+            fn write_state(&mut self, step: &str, token: &StakedCSPRHostRef, delays: u64);
+        }
 
+        pub struct NoOpStateWriter;
+
+        impl StateWriter for NoOpStateWriter {
+            fn write_state(&mut self, _step: &str, _token: &StakedCSPRHostRef, _delays: u64) {}
+        }
+
+        #[cfg(feature = "csv-report")]
+        pub struct CsvStateWriter {
+            file: std::fs::File,
+        }
+
+        #[cfg(feature = "csv-report")]
+        impl CsvStateWriter {
+            pub fn new(filename: &str) -> Self {
+                let file = std::fs::File::create(filename).unwrap();
+                let mut writer = Self { file };
+                writeln!(
+                    writer.file,
+                    "step,auction_delays,total_scspr,alice_scspr,bob_scspr,admin_scspr,alice_cspr,bob_cspr,admin_cspr,contract_cspr,delegated"
+                ).unwrap();
+                writer
+            }
+        }
+
+        #[cfg(feature = "csv-report")]
+        impl StateWriter for CsvStateWriter {
+            fn write_state(&mut self, step: &str, token: &StakedCSPRHostRef, delays: u64) {
+                let env = odra_test::env();
+                let alice = env.get_account(1);
+                let bob = env.get_account(2);
+                let admin = env.get_account(0);
+
+                let total_scspr = token.total_supply();
+                let alice_scspr = token.balance_of(&alice);
+                let bob_scspr = token.balance_of(&bob);
+                let admin_scspr = token.balance_of(&admin);
+
+                let alice_cspr = env.balance_of(&alice);
+                let bob_cspr = env.balance_of(&bob);
+                let admin_cspr = env.balance_of(&admin);
+                let contract_cspr = token.self_balance();
+                let delegated = token.staked_cspr();
+
+                writeln!(
+                    self.file,
+                    "{},{},{},{},{},{},{},{},{},{},{}",
+                    step,
+                    delays,
+                    total_scspr,
+                    alice_scspr,
+                    bob_scspr,
+                    admin_scspr,
+                    alice_cspr,
+                    bob_cspr,
+                    admin_cspr,
+                    contract_cspr,
+                    delegated
+                )
+                .unwrap();
+            }
+        }
+    }
     use super::*;
+    use crate::token::tests::state_writer::StateWriter;
+    use odra::host::{Deployer, HostRef};
 
     #[test]
     fn test_initialization() {
@@ -521,64 +605,30 @@ mod tests {
 
         // Setup accounts
         let alice = env.get_account(1);
-        let bob = env.get_account(2);
         let admin = env.get_account(0);
         let alice_initial_cspr_balance = env.balance_of(&alice);
+
+        // For debugging purposes
+        // Create state writer (NoOp by default, CsvStateWriter when feature enabled)
+        #[cfg(feature = "csv-report")]
+        let mut state_writer = state_writer::CsvStateWriter::new("staking_report.csv");
+        #[cfg(not(feature = "csv-report"))]
+        let mut state_writer = state_writer::NoOpStateWriter;
 
         let mut token = StakedCSPR::deploy(
             &env,
             StakedCSPRInitArgs {
                 validator_address: env.get_validator(0),
-                claim_time: env.auction_delay() * 8,
+                claim_time: unbonding_delay,
                 fee_percentage: 1000.into(),
             },
         );
 
-        // Create and initialize CSV file
-        let mut file = File::create("staking_report.csv").unwrap();
-        writeln!(
-            file,
-            "step,auction_delays,total_scspr,alice_scspr,bob_scspr,admin_scspr,alice_cspr,bob_cspr,admin_cspr,contract_cspr,delegated"
-        ).unwrap();
-
         // Track number of auction delays
         let mut total_delays = 0u64;
 
-        // Helper function to write state
-        let write_state = |file: &mut File, step: &str, token: &StakedCSPRHostRef, delays: u64| {
-            return;
-            // NOTE: to get report, uncomment this
-            // let total_scspr = token.total_supply();
-            // let alice_scspr = token.balance_of(&alice);
-            // let bob_scspr = token.balance_of(&bob);
-            // let admin_scspr = token.balance_of(&admin);
-
-            // let alice_cspr = env.balance_of(&alice);
-            // let bob_cspr = env.balance_of(&bob);
-            // let admin_cspr = env.balance_of(&admin);
-            // let contract_cspr = token.self_balance();
-
-            // let delegated = token.staked_cspr();
-
-            // writeln!(
-            //     file,
-            //     "{},{},{},{},{},{},{},{},{},{},{}",
-            //     step,
-            //     delays,
-            //     total_scspr,
-            //     alice_scspr,
-            //     bob_scspr,
-            //     admin_scspr,
-            //     alice_cspr,
-            //     bob_cspr,
-            //     admin_cspr,
-            //     contract_cspr,
-            //     delegated
-            // ).unwrap();
-        };
-
         // Initial state
-        write_state(&mut file, "initial", &token, total_delays);
+        state_writer.write_state("initial", &token, total_delays);
 
         // When Alice stakes 10 CSPR
         let deposit_amount_u512 = U512::from(10_000_000_000u64);
@@ -586,30 +636,30 @@ mod tests {
         env.set_caller(alice);
         token.with_tokens(deposit_amount_u512).stake();
 
-        write_state(&mut file, "after_alice_stake", &token, total_delays);
+        state_writer.write_state("after_alice_stake", &token, total_delays);
 
         // After time passes
         total_delays += 2;
         env.advance_with_auctions(auction_delay * 2);
-        write_state(&mut file, "after_delay", &token, total_delays);
+        state_writer.write_state("after_delay", &token, total_delays);
 
         // When Alice unstakes
         token.unstake(deposit_amount_u256);
-        write_state(&mut file, "after_alice_unstake", &token, total_delays);
+        state_writer.write_state("after_alice_unstake", &token, total_delays);
 
         // And one auction passes
         total_delays += 1;
         env.advance_with_auctions(auction_delay);
-        write_state(&mut file, "after_one_auction", &token, total_delays);
+        state_writer.write_state("after_one_auction", &token, total_delays);
 
         // After unbonding delay
         total_delays += 7;
         env.advance_with_auctions(auction_delay * 7);
-        write_state(&mut file, "after_unbonding", &token, total_delays);
+        state_writer.write_state("after_unbonding", &token, total_delays);
 
         // After Alice claims
         token.claim(0);
-        write_state(&mut file, "after_alice_claim", &token, total_delays);
+        state_writer.write_state("after_alice_claim", &token, total_delays);
 
         // Verify final state
         assert_eq!(token.balance_of(&admin), U256::from(98));
@@ -703,7 +753,7 @@ mod tests {
         env.set_caller(admin);
 
         // Then the initial validator should be in the list of validators and no other validator should be there.
-        let validators = token.validators();
+        let validators = token.get_validators();
         assert_eq!(validators.len(), 1);
         assert!(validators.contains(&initial_validator));
 
@@ -712,7 +762,7 @@ mod tests {
         token.add_validator(new_validator.clone());
 
         // Then the new validator should be in the list of validators.
-        let validators = token.validators();
+        let validators = token.get_validators();
         assert_eq!(validators.len(), 2);
         assert!(validators.contains(&new_validator));
         assert!(validators.contains(&initial_validator));

@@ -43,7 +43,6 @@ fn check_staked_cspr(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
     assert_eq!(cspr_amount, staked_cspr);
 }
 
-///     Then more than 20 CSPR is staked
 #[then(expr = "more than {cspr_amount} CSPR is staked")]
 fn check_more_than_staked_cspr(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
     assert!(world.token.staked_cspr() > cspr_amount.amount());

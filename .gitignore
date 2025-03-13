@@ -1,5 +1,6 @@
 .idea
 .vscode
+*.code-workspace
 /target
 Cargo.lock
 .backend*

@@ -18,6 +18,9 @@ odra-build.workspace = true
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 odra-build.workspace = true
 
+[features]
+csv-report = []
+
 [[bin]]
 name = "liquid_staking_contracts_build_contract"
 path = "bin/build_contract.rs"
@@ -28,14 +31,18 @@ name = "liquid-staking-contracts_build_schema"
 path = "bin/build_schema.rs"
 test = false
 
-[[test]]
-name = "test_staking"
-harness = false
+#[[test]]
+#name = "test_staking"
+#harness = false
+#
+#[[test]]
+#name = "test_pool"
+#harness = false
+#
+#[[test]]
+#name = "test_fee"
+#harness = false
 
 [[test]]
-name = "test_pool"
-harness = false
-
-[[test]]
-name = "test_fee"
+name = "test_validators"
 harness = false

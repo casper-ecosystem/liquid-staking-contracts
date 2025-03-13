@@ -7,8 +7,8 @@ use odra_bdd::{bdd_env::BDDEnv, types::token_amount::TokenAmount};
 
 #[derive(World)]
 pub struct LSTWorld {
-    pub(crate) env: BDDEnv,
-    pub(crate) token: StakedCSPRHostRef,
+    pub env: BDDEnv,
+    pub token: StakedCSPRHostRef,
 }
 
 impl Default for LSTWorld {
