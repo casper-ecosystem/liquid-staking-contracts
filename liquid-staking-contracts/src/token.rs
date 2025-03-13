@@ -305,9 +305,12 @@ impl StakedCSPR {
         }
 
         let mut validators = self.validators.get().unwrap_or_default();
-        // TODO: check if there is a validator with the same key
-        validators.push(public_key);
-        self.validators.set(validators);
+
+        // Check if the validator already exists in the list
+        if !validators.contains(&public_key) {
+            validators.push(public_key);
+            self.validators.set(validators);
+        }
     }
 
     pub fn remove_validator(&mut self, public_key: PublicKey) {
@@ -321,8 +324,14 @@ impl StakedCSPR {
         // TODO: Handle validator's pool
 
         let mut validators = self.validators.get().unwrap_or_default();
-        validators.remove(validators.iter().position(|v| v == &public_key).unwrap());
-        self.validators.set(validators);
+
+        // Find the position of the validator in the list
+        if let Some(position) = validators.iter().position(|v| v == &public_key) {
+            // Only remove if the validator exists
+            validators.remove(position);
+            self.validators.set(validators);
+        }
+        // If validator doesn't exist, do nothing
     }
 
     pub fn get_validators(&self) -> Vec<PublicKey> {

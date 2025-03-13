@@ -1,5 +1,6 @@
 use crate::lst_world::LSTWorld;
 use cucumber::{given, then, when};
+use liquid_staking_contracts::token::Error;
 use odra_bdd::types::account::Account;
 
 #[given(expr = "Owner deploys a contract with Validator{int}")]
@@ -31,7 +32,7 @@ fn count_validators(world: &mut LSTWorld, count: u32) {
     assert_eq!(validators.len(), count as usize);
 }
 
-#[when(expr = "{account} adds Validator{int}")]
+#[when(expr = "{account} adds Validator{int}( again)")]
 fn add_validator(world: &mut LSTWorld, account: Account, validator_num: u32) {
     world.env.set_caller(&account);
     let validator_address = world.env.env().get_validator(validator_num as usize - 1);
@@ -43,4 +44,40 @@ fn remove_validator(world: &mut LSTWorld, account: Account, validator_num: u32) 
     world.env.set_caller(&account);
     let validator_address = world.env.env().get_validator(validator_num as usize - 1);
     world.token.remove_validator(validator_address);
+}
+
+#[when(expr = "{account} tries to remove Validator{int}")]
+fn try_remove_validator(world: &mut LSTWorld, account: Account, validator_num: u32) {
+    world.env.set_caller(&account);
+    let validator_address = world.env.env().get_validator(validator_num as usize - 1);
+    let result = world.token.try_remove_validator(validator_address);
+
+    assert!(
+        result.is_err(),
+        "Expected an error when unprivileged account tries to remove validator"
+    );
+
+    assert_eq!(
+        result.unwrap_err(),
+        Error::NotAnOwner.into(),
+        "Expected NotAnOwner error when unprivileged account tries to remove validator"
+    );
+}
+
+#[when(expr = "{account} tries to add Validator{int}")]
+fn try_add_validator(world: &mut LSTWorld, account: Account, validator_num: u32) {
+    world.env.set_caller(&account);
+    let validator_address = world.env.env().get_validator(validator_num as usize - 1);
+    let result = world.token.try_add_validator(validator_address);
+
+    assert!(
+        result.is_err(),
+        "Expected an error when unprivileged account tries to add validator"
+    );
+
+    assert_eq!(
+        result.unwrap_err(),
+        Error::NotAnOwner.into(),
+        "Expected NotAnOwner error when unprivileged account tries to add validator"
+    );
 }
