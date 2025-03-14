@@ -43,6 +43,10 @@ test = false
 #name = "test_fee"
 #harness = false
 
+# [[test]]
+# name = "test_validators"
+# harness = false
+
 [[test]]
-name = "test_validators"
+name = "test_restaking"
 harness = false

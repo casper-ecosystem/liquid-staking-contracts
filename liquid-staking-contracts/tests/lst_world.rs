@@ -1,14 +1,19 @@
-use std::{ops::Deref, str::FromStr};
+use std::{collections::HashMap, ops::Deref, str::FromStr};
 
 use cucumber::{Parameter, World};
 use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRHostRef, StakedCSPRInitArgs};
-use odra::{casper_types::U256, host::Deployer};
+use odra::{
+    casper_types::{PublicKey, U256, U512},
+    host::Deployer,
+};
 use odra_bdd::{bdd_env::BDDEnv, types::token_amount::TokenAmount};
 
 #[derive(World)]
 pub struct LSTWorld {
     pub env: BDDEnv,
     pub token: StakedCSPRHostRef,
+    // (entrypoint, pool state)
+    pub pool_state: Vec<(String, HashMap<PublicKey, U512>)>,
 }
 
 impl Default for LSTWorld {
@@ -23,11 +28,24 @@ impl Default for LSTWorld {
                 fee_percentage: 1000.into(),
             },
         );
-        Self { env, token }
+        Self {
+            env,
+            token,
+            pool_state: vec![],
+        }
     }
 }
 
-impl LSTWorld {}
+impl LSTWorld {
+    pub fn update_pool_state(&mut self, entrypoint: &str) {
+        let validators = self.token.get_validators();
+        let pool_state = validators
+            .iter()
+            .map(|validator| (validator.clone(), self.token.get_validator_stake(validator)))
+            .collect();
+        self.pool_state.push((entrypoint.to_string(), pool_state));
+    }
+}
 
 impl std::fmt::Debug for LSTWorld {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

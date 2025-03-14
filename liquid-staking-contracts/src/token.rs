@@ -337,6 +337,10 @@ impl StakedCSPR {
     pub fn get_validators(&self) -> Vec<PublicKey> {
         self.validators.get().unwrap_or_default()
     }
+
+    pub fn get_validator_stake(&self, validator: &PublicKey) -> U512 {
+        self.env().delegated_amount(validator.clone())
+    }
 }
 
 impl StakedCSPR {
