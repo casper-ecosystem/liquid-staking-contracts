@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::lst_world::{LSTWorld, StakedCSPRAmount};
 use cucumber::{given, then};
 use odra::casper_types::U512;
@@ -76,16 +74,7 @@ fn check_one_validator_got_stake(world: &mut LSTWorld, cspr_amount: CSPRAmount) 
     // Get the second-to-last stake state (skip the most recent one)
     let second_last_index = stake_states.len() - 2;
     let state = stake_states[second_last_index].1.clone();
-
-    // Let's collect current validator stakes
-    let validators = world.token.get_validators();
-    let mut current_stakes = HashMap::new();
-    for validator in validators {
-        current_stakes.insert(
-            validator.clone(),
-            world.token.get_validator_stake(&validator),
-        );
-    }
+    let current_stakes = world.current_stakes();
 
     // Now we need to make sure that only one validator has more stake than before with the given amount
     let mut upstaked_validators = 0;
@@ -116,5 +105,73 @@ fn check_total_validator_stakes(world: &mut LSTWorld, expected_total: CSPRAmount
         "Total stake across validators ({}) doesn't match expected amount ({})",
         total_stake,
         expected_total.amount()
+    );
+}
+
+#[then(expr = "{cspr_amount} CSPR is loose")]
+fn check_loose_tokens(world: &mut LSTWorld, cspr: CSPRAmount) {
+    // Get the loose tokens from the contract
+    let loose_tokens = world.token.get_loose_tokens();
+
+    // Sum up the total amount of loose tokens
+    let total_loose = loose_tokens
+        .iter()
+        .fold(U512::zero(), |acc, token| acc + token.amount);
+
+    // Assert that the total loose tokens match the expected amount
+    assert_eq!(
+        total_loose,
+        cspr.amount(),
+        "Total loose tokens ({}) doesn't match expected amount ({})",
+        total_loose,
+        cspr.amount()
+    );
+
+    // Also the balance of the token should be greater than the total loose tokens
+    assert!(
+        world.token.self_balance() >= total_loose,
+        "Token balance ({}) is less than the total loose tokens ({})",
+        world.token.self_balance(),
+        total_loose
+    );
+}
+
+#[then(expr = "3 validators received total {cspr_amount} CSPR since last remove in equal amounts")]
+fn random_validators_check(world: &mut LSTWorld, cspr: CSPRAmount) {
+    let remove_state = world
+        .pool_state
+        .iter()
+        .filter(|(entrypoint, _)| *entrypoint == "remove_validator")
+        .last()
+        .unwrap()
+        .1
+        .clone();
+    let current_stakes = world.current_stakes();
+
+    let mut upstaked_validators = 0;
+    let mut total = U512::zero();
+    for (validator, stake) in current_stakes {
+        let previous_stake = remove_state
+            .get(&validator)
+            .unwrap_or(&U512::zero())
+            .clone();
+        if stake != previous_stake {
+            upstaked_validators += 1;
+            total += stake;
+        }
+    }
+
+    assert_eq!(
+        upstaked_validators, 3,
+        "Expected exactly 3 validators to receive the stake amount"
+    );
+
+    let expected = cspr.amount() / 3;
+    assert_eq!(
+        total,
+        expected * 3,
+        "Total stake across validators ({}) doesn't match expected amount ({})",
+        total,
+        expected
     );
 }

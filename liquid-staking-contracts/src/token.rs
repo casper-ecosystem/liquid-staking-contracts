@@ -55,9 +55,13 @@ pub struct StakedCSPR {
     unstakes: List<Unstake>,
     unclaimed_cspr: Var<U512>,
     validators: Var<Vec<PublicKey>>,
+    /// Stored configuration of the time it takes for unstaked tokens to be claimable
     claim_time: Var<u64>,
     last_recorded_delegated_amount: Var<U512>,
+    /// Fee percentage to be charged for staking
     fee_percentage: Var<U512>,
+    /// Tokens will be available to be staked again
+    loose_tokens: Var<Vec<LooseToken>>,
 }
 
 #[odra::odra_type]
@@ -67,6 +71,12 @@ struct Unstake {
     cspr_amount: U512,
     claimable_from: u64,
     claimed: bool,
+}
+
+#[odra::odra_type]
+pub struct LooseToken {
+    pub amount: U512,
+    pub available_from: u64,
 }
 
 #[odra::module]
@@ -135,7 +145,7 @@ impl StakedCSPR {
         let cspr_amount = self.env().attached_value();
         let scspr_amount = self.cspr_to_scspr(cspr_amount);
         self.env()
-            .delegate(self.get_random_validator(), cspr_amount);
+            .delegate(self.get_random_validators(1)[0].clone(), cspr_amount);
         self.token.raw_mint(&caller, &scspr_amount);
 
         self.env().emit_event(Staked {
@@ -241,8 +251,10 @@ impl StakedCSPR {
     #[odra(payable)]
     pub fn add_to_the_pool(&mut self) {
         self.collect_fee();
-        self.env()
-            .delegate(self.get_random_validator(), self.env().attached_value());
+        self.env().delegate(
+            self.get_random_validators(1)[0].clone(),
+            self.env().attached_value(),
+        );
         self.last_recorded_delegated_amount.set(self.staked_cspr());
     }
 
@@ -321,8 +333,6 @@ impl StakedCSPR {
             self.env().revert(NotAnOwner);
         }
 
-        // TODO: Handle validator's pool
-
         let mut validators = self.validators.get().unwrap_or_default();
 
         // Find the position of the validator in the list
@@ -330,8 +340,38 @@ impl StakedCSPR {
             // Only remove if the validator exists
             validators.remove(position);
             self.validators.set(validators);
+
+            // Unstake all the stake from the validator
+            let cspr_amount = self.env().delegated_amount(public_key.clone());
+            self.env().undelegate(public_key, cspr_amount);
+
+            // Mark the amount as loose tokens to be staked again
+            let mut loose_tokens = self.loose_tokens.get().unwrap_or_default();
+            loose_tokens.push(LooseToken {
+                amount: cspr_amount,
+                available_from: self.env().get_block_time() + self.next_claim_time(),
+            });
+            self.loose_tokens.set(loose_tokens);
         }
         // If validator doesn't exist, do nothing
+    }
+
+    pub fn restake_loose_tokens(&mut self) {
+        let mut loose_tokens = self.loose_tokens.get().unwrap_or_default();
+
+        for (i, token) in loose_tokens.clone().iter().enumerate() {
+            if token.available_from <= self.env().get_block_time() {
+                let validators = self.get_random_validators(3);
+                // And delegate the amount to them, equally divided
+                let amount_to_delegate = token.amount / validators.len();
+                for validator in validators.iter() {
+                    self.env().delegate(validator.clone(), amount_to_delegate);
+                }
+
+                loose_tokens.remove(i);
+            }
+        }
+        self.loose_tokens.set(loose_tokens);
     }
 
     pub fn get_validators(&self) -> Vec<PublicKey> {
@@ -340,6 +380,10 @@ impl StakedCSPR {
 
     pub fn get_validator_stake(&self, validator: &PublicKey) -> U512 {
         self.env().delegated_amount(validator.clone())
+    }
+
+    pub fn get_loose_tokens(&self) -> Vec<LooseToken> {
+        self.loose_tokens.get().unwrap_or_default()
     }
 }
 
@@ -410,8 +454,7 @@ impl StakedCSPR {
         }
     }
 
-    // Add helper method to get random validator index
-    fn get_random_validator_index(&self) -> usize {
+    fn get_random_validator_indices(&self, amount: usize) -> Vec<usize> {
         let validators = self
             .validators
             .get()
@@ -419,17 +462,38 @@ impl StakedCSPR {
         if validators.is_empty() {
             self.env().revert(MisconfiguredValidator);
         }
-        // Use the block time as a simple source of randomness
-        (self.env().get_block_time() as usize) % validators.len()
+
+        let validator_count = validators.len();
+        // Cap the amount at the number of validators
+        let amount_to_return = amount.min(validator_count);
+
+        let mut all_indices: Vec<usize> = (0..validator_count).collect();
+        let mut selected_indices = Vec::with_capacity(amount_to_return);
+
+        // Use the block time as a simple seed for randomness
+        let seed = self.env().get_block_time() as usize;
+
+        // Select unique indices using a deterministic but pseudo-random approach
+        for i in 0..amount_to_return {
+            // Determine next position based on seed and current iteration
+            let pos = (seed + i * 17) % all_indices.len();
+            // Take the index at that position
+            let selected = all_indices.remove(pos);
+            selected_indices.push(selected);
+        }
+
+        selected_indices
     }
 
-    // Update get_random_validator to use the new method
-    fn get_random_validator(&self) -> PublicKey {
+    fn get_random_validators(&self, amount: usize) -> Vec<PublicKey> {
         let validators = self
             .validators
             .get()
             .unwrap_or_revert_with(self, MisconfiguredValidator);
-        validators[self.get_random_validator_index()].clone()
+
+        // Just get a single random index
+        let indices = self.get_random_validator_indices(amount);
+        indices.iter().map(|i| validators[*i].clone()).collect()
     }
 
     // Update undelegate_from_validators to use simpler random selection
@@ -444,7 +508,7 @@ impl StakedCSPR {
         }
 
         // Start from a random index
-        let start_idx = self.get_random_validator_index();
+        let start_idx = self.get_random_validator_indices(1)[0];
         let len = validators.len();
 
         // Try each validator starting from the random index, wrapping around

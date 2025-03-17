@@ -44,6 +44,7 @@ fn remove_validator(world: &mut LSTWorld, account: Account, validator_num: u32) 
     world.env.set_caller(&account);
     let validator_address = world.env.env().get_validator(validator_num as usize - 1);
     world.token.remove_validator(validator_address);
+    world.update_pool_state("remove_validator");
 }
 
 #[when(expr = "{account} tries to remove Validator{int}")]

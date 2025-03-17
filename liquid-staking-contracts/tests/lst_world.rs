@@ -45,6 +45,19 @@ impl LSTWorld {
             .collect();
         self.pool_state.push((entrypoint.to_string(), pool_state));
     }
+
+    pub fn current_stakes(&self) -> HashMap<PublicKey, U512> {
+        // Let's collect current validator stakes
+        let validators = self.token.get_validators();
+        let mut current_stakes = HashMap::new();
+        for validator in validators {
+            current_stakes.insert(
+                validator.clone(),
+                self.token.get_validator_stake(&validator),
+            );
+        }
+        current_stakes
+    }
 }
 
 impl std::fmt::Debug for LSTWorld {
