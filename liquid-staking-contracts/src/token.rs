@@ -2,6 +2,7 @@ use crate::token::Error::*;
 use odra::{
     casper_types::{PublicKey, U256, U512},
     prelude::*,
+    uints::{ToU256, ToU512},
 };
 use odra_modules::{
     access::Ownable,
@@ -9,52 +10,103 @@ use odra_modules::{
     cep18_token::Cep18,
 };
 
+/// Error enum for the StakedCSPR contract
 #[odra::odra_error]
 pub enum Error {
+    /// The unbonding delay has not passed yet
     NotYetClaimable = 61401,
+    /// The unstake has already been claimed
     AlreadyClaimed = 61402,
+    /// The user is not the owner of the unstake
     NotAnOwnerOfAClaim = 61403,
+    /// The unstake was not found
     UnstakeNotFound = 61404,
+    /// The user is not the owner of the contract
     NotAnOwner = 61405,
+    /// The contract does not have enough balance
     InsufficientBalance = 61406,
+    /// The validator is misconfigured
     MisconfiguredValidator = 61407,
 }
 
+/// Event emitted when a user stakes CSPR
 #[odra::event]
 pub struct Staked {
+    /// The address of the user who staked the CSPR
     address: Address,
+    /// The amount of CSPR that was staked
     cspr_amount: U512,
+    /// The amount of sCSPR that was minted
     scspr_minted: U256,
 }
 
+/// Event emitted when a user unstakes CSPR
 #[odra::event]
 pub struct Unstaked {
+    /// The address of the user who unstaked the CSPR
     address: Address,
+    /// The amount of CSPR that was unstaked
     cspr_amount: U512,
+    /// The amount of sCSPR that was burned
     scspr_burned: U256,
+    /// The id of the unstake
     unstake_id: u32,
+    /// The time when the unstake will be claimable
     claim_time: u64,
 }
 
+/// Event emitted when a user claims their unstaked CSPR
 #[odra::event]
 pub struct Claimed {
+    /// The address of the user who claimed the unstake
     address: Address,
+    /// The amount of CSPR that was claimed
     cspr_amount: U512,
+    /// The id of the unstake
     unstake_id: u32,
 }
 
+/// Event emitted when a user delegates CSPR to a validator
+#[odra::event]
+pub struct Delegated {
+    /// The address of the user who delegated the CSPR
+    address: Address,
+    /// The amount of CSPR that was delegated
+    amount: U512,
+    /// The validator that the CSPR was delegated to
+    validator: PublicKey,
+}
+
+/// Event emitted when a user undelegates CSPR from a validator
+#[odra::event]
+pub struct Undelegated {
+    /// The address of the user who undelegated the CSPR
+    address: Address,
+    /// The amount of CSPR that was undelegated
+    amount: U512,
+    /// The validator that the CSPR was undelegated from
+    validator: PublicKey,
+}
+
 #[odra::module(
-    events = [Staked, Unstaked, Claimed],
+    events = [Staked, Unstaked, Claimed, Delegated, Undelegated],
     errors = Error
 )]
 pub struct StakedCSPR {
+    /// Ownable module
     ownable: SubModule<Ownable>,
+    /// Token module
     token: SubModule<Cep18>,
+    /// Unstake ids for each user
     unstake_ids: Mapping<Address, Vec<u32>>,
+    /// List of unstakes
     unstakes: List<Unstake>,
+    /// List of validators
     validators: Var<Vec<PublicKey>>,
     /// Stored configuration of the time it takes for unstaked tokens to be claimable
     claim_time: Var<u64>,
+    /// Delegated amount during the last change to the stake
+    /// This is used to calculate the rewards granted and consequently, the fee
     last_recorded_delegated_amount: Var<U512>,
     /// Fee percentage to be charged for staking
     fee_percentage: Var<U512>,
@@ -65,10 +117,15 @@ pub struct StakedCSPR {
 /// as the unstake needs to wait for the unbonding delay before it can be claimed
 #[odra::odra_type]
 struct Unstake {
+    /// The id of the unstake
     unstake_id: u32,
+    /// The address of the owner of the unstake
     owner: Address,
+    /// The amount of CSPR that was unstaked
     cspr_amount: U512,
+    /// The time when the unstake will be claimable
     claimable_from: u64,
+    /// Whether the unstake has been claimed
     claimed: bool,
 }
 
@@ -127,14 +184,18 @@ impl StakedCSPR {
         self.last_recorded_delegated_amount.set(U512::zero());
     }
 
+    /// Stakes CSPR
+    /// This function is payable, the attached value is the amount of CSPR to stake
     #[odra(payable)]
     pub fn stake(&mut self) {
         self.collect_fee();
+
         let caller = self.env().caller();
         let cspr_amount = self.env().attached_value();
         let scspr_amount = self.cspr_to_scspr(cspr_amount);
-        self.env()
-            .delegate(self.get_random_validators(1)[0].clone(), cspr_amount);
+
+        self.delegate(self.get_random_validators(1)[0].clone(), cspr_amount);
+
         self.token.raw_mint(&caller, &scspr_amount);
 
         self.env().emit_event(Staked {
@@ -142,12 +203,20 @@ impl StakedCSPR {
             cspr_amount,
             scspr_minted: scspr_amount,
         });
+
         self.last_recorded_delegated_amount.set(self.staked_cspr());
     }
 
-    pub fn unstake(&mut self, scspr_amount: U256) -> u32 {
+    /// Unstakes sCSPR
+    ///
+    /// # Arguments
+    ///
+    /// * `scspr_amount` - The amount of sCSPR to unstake
+    pub fn unstake(&mut self, scspr_amount: U256) {
         self.collect_fee();
+
         let caller = self.env().caller();
+
         if self.token.balance_of(&caller) < scspr_amount {
             self.env().revert(Cep18Error::InsufficientBalance);
         }
@@ -162,6 +231,7 @@ impl StakedCSPR {
 
         self.token.raw_burn(&caller, &scspr_amount);
 
+        // To keep track of the unstakes, we assign them an id
         let mut account_unstake_ids = self.unstake_ids.get(&caller).unwrap_or_default();
         let new_unstake_id = self.unstakes.len();
         account_unstake_ids.push(new_unstake_id);
@@ -185,28 +255,23 @@ impl StakedCSPR {
         });
 
         self.last_recorded_delegated_amount.set(self.staked_cspr());
-
-        new_unstake_id
     }
 
+    /// Claims unstaked CSPR
+    /// It checks all claims that are claimable and claims them for the caller
     pub fn claim(&mut self) {
         let caller = self.env().caller();
         let mut unstake_ids = self
             .unstake_ids
             .get(&self.env().caller())
             .unwrap_or_default();
+
         for (index, unstake_id) in unstake_ids.clone().iter().enumerate() {
             let mut unstake = self
                 .unstakes
                 .get(*unstake_id)
                 .unwrap_or_revert_with(self, UnstakeNotFound);
-            if unstake.claimable_from > self.env().get_block_time() {
-                continue;
-            }
-            if unstake.claimed {
-                continue;
-            }
-            if unstake.owner != caller {
+            if unstake.claimable_from > self.env().get_block_time() || unstake.claimed {
                 continue;
             }
 
@@ -222,9 +287,11 @@ impl StakedCSPR {
                 unstake_id: *unstake_id,
             });
         }
+
         self.unstake_ids.set(&caller, unstake_ids);
     }
 
+    /// Returns the total amount of CSPR that is staked
     pub fn staked_cspr(&self) -> U512 {
         let validators = self
             .validators
@@ -240,16 +307,19 @@ impl StakedCSPR {
         })
     }
 
+    /// Adds CSPR to the pool
+    /// This function is payable, the attached value is the amount of CSPR to add to the pool
     #[odra(payable)]
     pub fn add_to_the_pool(&mut self) {
         self.collect_fee();
-        self.env().delegate(
+        self.delegate(
             self.get_random_validators(1)[0].clone(),
             self.env().attached_value(),
         );
         self.last_recorded_delegated_amount.set(self.staked_cspr());
     }
 
+    /// Removes CSPR from the pool
     pub fn remove_from_the_pool(&mut self, amount: U512) {
         self.ownable.assert_owner(&self.env().caller());
         self.collect_fee();
@@ -263,7 +333,8 @@ impl StakedCSPR {
         self.last_recorded_delegated_amount.set(self.staked_cspr());
     }
 
-    pub fn withdraw_from_the_pool(&mut self, amount: U512) {
+    /// Withdraws CSPR from the contract
+    pub fn withdraw_from_the_contract(&mut self, amount: U512) {
         self.ownable.assert_owner(&self.env().caller());
 
         if !self.env().self_balance() < amount {
@@ -279,6 +350,7 @@ impl StakedCSPR {
         self.env().self_balance()
     }
 
+    /// Adds a validator to the list of validators
     pub fn add_validator(&mut self, public_key: PublicKey) {
         self.ownable.assert_owner(&self.env().caller());
 
@@ -291,6 +363,7 @@ impl StakedCSPR {
         }
     }
 
+    /// Removes a validator from the list of validators
     pub fn remove_validator(&mut self, public_key: PublicKey) {
         self.ownable.assert_owner(&self.env().caller());
 
@@ -305,30 +378,46 @@ impl StakedCSPR {
             // Unstake all the stake from the validator, but only if there is some stake
             let cspr_amount = self.env().delegated_amount(public_key.clone());
             if cspr_amount > U512::zero() {
-                self.env().undelegate(public_key, cspr_amount);
+                self.undelegate(public_key, cspr_amount);
             }
         }
         // If validator doesn't exist, do nothing
     }
 
+    /// Restakes loose tokens
+    /// Checks the amount of loose tokens (CSPR on the contract which is not staked
+    /// or claimable) and delegates it to 3 random validators, equally divided
     pub fn restake_loose_tokens(&mut self) {
         let loose_tokens = self.get_loose_tokens();
         let validators = self.get_random_validators(3);
-        // And delegate the amount to them, equally divided
         let amount_to_delegate = loose_tokens / validators.len();
         for validator in validators.iter() {
-            self.env().delegate(validator.clone(), amount_to_delegate);
+            self.delegate(validator.clone(), amount_to_delegate);
         }
+        self.last_recorded_delegated_amount.set(self.staked_cspr());
     }
 
+    /// Returns the list of validators
     pub fn get_validators(&self) -> Vec<PublicKey> {
         self.validators.get().unwrap_or_default()
     }
 
+    /// Returns the amount of CSPR that is delegated to a validator
     pub fn get_validator_stake(&self, validator: &PublicKey) -> U512 {
         self.env().delegated_amount(validator.clone())
     }
 
+    /// Returns the total amount of stake on the contract
+    pub fn get_total_stake(&self) -> U512 {
+        let mut total = U512::zero();
+        for validator in self.get_validators() {
+            total += self.get_validator_stake(&validator);
+        }
+        total
+    }
+
+    /// Returns the amount of loose tokens (CSPR on the contract which is not staked
+    /// or claimable)
     pub fn get_loose_tokens(&self) -> U512 {
         let unclaimed = self
             .unstakes
@@ -339,33 +428,53 @@ impl StakedCSPR {
 }
 
 impl StakedCSPR {
-    pub fn next_claim_time(&self) -> u64 {
+    fn delegate(&self, public_key: PublicKey, amount: U512) {
+        self.env().delegate(public_key.clone(), amount);
+        self.env().emit_event(Delegated {
+            address: self.env().caller(),
+            amount,
+            validator: public_key,
+        });
+    }
+
+    fn undelegate(&self, public_key: PublicKey, amount: U512) {
+        self.env().undelegate(public_key.clone(), amount);
+        self.env().emit_event(Undelegated {
+            address: self.env().caller(),
+            amount,
+            validator: public_key,
+        });
+    }
+
+    fn next_claim_time(&self) -> u64 {
         let now = self.env().get_block_time();
         let claim_time = self.claim_time.get().unwrap_or_default();
         now + claim_time
     }
 
     // TODO: Cover with tests at U256 and U512 boundaries.
-    pub fn cspr_to_scspr(&self, cspr_stake: U512) -> U256 {
+    fn cspr_to_scspr(&self, cspr_stake: U512) -> U256 {
         let staked_cspr = self.staked_cspr();
         if staked_cspr.is_zero() {
-            return u512_to_u256(cspr_stake);
+            return cspr_stake.to_u256().unwrap_or_revert(self);
         }
-        let scspr_total_supply = u256_to_u512(self.token.total_supply());
-        u512_to_u256(cspr_stake * scspr_total_supply / staked_cspr)
+        let scspr_total_supply = self.token.total_supply().to_u512();
+        (cspr_stake * scspr_total_supply / staked_cspr)
+            .to_u256()
+            .unwrap_or_revert(self)
     }
 
-    pub fn scspr_to_cspr(&self, scspr: U256) -> U512 {
+    fn scspr_to_cspr(&self, scspr: U256) -> U512 {
         if scspr.is_zero() {
             return U512::zero();
         }
-        let scspr_total_supply = u256_to_u512(self.token.total_supply());
+        let scspr_total_supply = self.token.total_supply().to_u512();
         if scspr_total_supply.is_zero() {
             return U512::zero();
         }
         let staked_cspr = self.staked_cspr();
 
-        u256_to_u512(scspr) * staked_cspr / scspr_total_supply
+        (scspr).to_u512() * staked_cspr / scspr_total_supply
     }
 
     /// Calculates the rewards since last collection and mints the fee in the form of
@@ -391,11 +500,13 @@ impl StakedCSPR {
             let fee = reward * fee_percent / U512::from(10000u64);
             // Calculate fee_scspr based on total staked amount of cspr and total liquidity of scspr
             let total_staked_cspr = self.staked_cspr();
-            let total_scspr_liquidity = u256_to_u512(self.token.total_supply());
+            let total_scspr_liquidity = self.token.total_supply().to_u512();
             let fee_scspr = if total_staked_cspr.is_zero() || total_scspr_liquidity.is_zero() {
                 U256::zero()
             } else {
-                u512_to_u256(fee * total_scspr_liquidity / total_staked_cspr)
+                (fee * total_scspr_liquidity / total_staked_cspr)
+                    .to_u256()
+                    .unwrap_or_revert(self)
             };
             // Mint sCSPR to admin (using the deployer/admin stored in DEFAULT_ADMIN_ROLE)
             let admin = self.ownable.get_owner();
@@ -469,13 +580,13 @@ impl StakedCSPR {
             let delegated = self.env().delegated_amount(validator.clone());
 
             if delegated > U512::zero() {
-                let amount_to_undelegate = if delegated >= remaining_amount {
+                let amount_to_undelegate: U512 = if delegated >= remaining_amount {
                     remaining_amount
                 } else {
                     delegated
                 };
 
-                self.env().undelegate(validator, amount_to_undelegate);
+                self.undelegate(validator, amount_to_undelegate);
                 remaining_amount -= amount_to_undelegate;
 
                 if remaining_amount.is_zero() {
@@ -486,14 +597,6 @@ impl StakedCSPR {
 
         total_amount - remaining_amount // Return the actual amount undelegated
     }
-}
-
-fn u512_to_u256(value: U512) -> U256 {
-    U256::from(value.as_u128())
-}
-
-fn u256_to_u512(value: U256) -> U512 {
-    U512::from(value.as_u128())
 }
 
 #[cfg(test)]

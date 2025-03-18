@@ -50,8 +50,8 @@ fn remove_from_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSP
 #[when(expr = "{account} withdraws {cspr_amount} CSPR from the contract")]
 fn withdraw_from_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
     world.env.set_caller(&account);
-    world.token.withdraw_from_the_pool(*cspr_amount);
-    world.update_pool_state("withdraw_from_the_pool");
+    world.token.withdraw_from_the_contract(*cspr_amount);
+    world.update_pool_state("withdraw_from_the_contract");
 }
 
 #[when(expr = "{account} restakes loose tokens")]
