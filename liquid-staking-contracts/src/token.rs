@@ -59,8 +59,6 @@ pub struct StakedCSPR {
     last_recorded_delegated_amount: Var<U512>,
     /// Fee percentage to be charged for staking
     fee_percentage: Var<U512>,
-    /// Tokens will be available to be staked again
-    loose_tokens: Var<Vec<LooseToken>>,
 }
 
 /// Unstake struct
@@ -73,13 +71,6 @@ struct Unstake {
     cspr_amount: U512,
     claimable_from: u64,
     claimed: bool,
-}
-
-// TODO: Remove this type
-#[odra::odra_type]
-pub struct LooseToken {
-    pub amount: U512,
-    pub available_from: u64,
 }
 
 #[odra::module]
@@ -311,35 +302,19 @@ impl StakedCSPR {
             let cspr_amount = self.env().delegated_amount(public_key.clone());
             if cspr_amount > U512::zero() {
                 self.env().undelegate(public_key, cspr_amount);
-
-                // Mark the amount as loose tokens to be staked again
-                let mut loose_tokens = self.loose_tokens.get().unwrap_or_default();
-                loose_tokens.push(LooseToken {
-                    amount: cspr_amount,
-                    available_from: self.env().get_block_time() + self.next_claim_time(),
-                });
-                self.loose_tokens.set(loose_tokens);
             }
         }
         // If validator doesn't exist, do nothing
     }
 
     pub fn restake_loose_tokens(&mut self) {
-        let mut loose_tokens = self.loose_tokens.get().unwrap_or_default();
-
-        for (i, token) in loose_tokens.clone().iter().enumerate() {
-            if token.available_from <= self.env().get_block_time() {
-                let validators = self.get_random_validators(3);
-                // And delegate the amount to them, equally divided
-                let amount_to_delegate = token.amount / validators.len();
-                for validator in validators.iter() {
-                    self.env().delegate(validator.clone(), amount_to_delegate);
-                }
-
-                loose_tokens.remove(i);
-            }
+        let loose_tokens = self.get_loose_tokens();
+        let validators = self.get_random_validators(3);
+        // And delegate the amount to them, equally divided
+        let amount_to_delegate = loose_tokens / validators.len();
+        for validator in validators.iter() {
+            self.env().delegate(validator.clone(), amount_to_delegate);
         }
-        self.loose_tokens.set(loose_tokens);
     }
 
     pub fn get_validators(&self) -> Vec<PublicKey> {
@@ -350,8 +325,12 @@ impl StakedCSPR {
         self.env().delegated_amount(validator.clone())
     }
 
-    pub fn get_loose_tokens(&self) -> Vec<LooseToken> {
-        self.loose_tokens.get().unwrap_or_default()
+    pub fn get_loose_tokens(&self) -> U512 {
+        let unclaimed = self
+            .unstakes
+            .iter()
+            .fold(U512::zero(), |acc, unstake| acc + unstake.cspr_amount);
+        self.env().self_balance() - unclaimed
     }
 }
 

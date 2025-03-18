@@ -111,12 +111,7 @@ fn check_total_validator_stakes(world: &mut LSTWorld, expected_total: CSPRAmount
 #[then(expr = "{cspr_amount} CSPR is loose")]
 fn check_loose_tokens(world: &mut LSTWorld, cspr: CSPRAmount) {
     // Get the loose tokens from the contract
-    let loose_tokens = world.token.get_loose_tokens();
-
-    // Sum up the total amount of loose tokens
-    let total_loose = loose_tokens
-        .iter()
-        .fold(U512::zero(), |acc, token| acc + token.amount);
+    let total_loose = world.token.get_loose_tokens();
 
     // Assert that the total loose tokens match the expected amount
     assert_eq!(
