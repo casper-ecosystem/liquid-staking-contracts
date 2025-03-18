@@ -31,3 +31,12 @@ Feature: Multiple Validators
   Scenario: Removing a validator that is not in the list
     When Owner removes Validator3
     Then contract has 1 validator
+
+  Scenario: Only an admin can remove a validator
+    When Owner adds Validator2
+    And Alice tries to remove Validator2
+    Then Validator2 is a validator
+    And contract has 2 validators
+    When Owner removes Validator2
+    Then Validator2 is not a validator
+    And contract has 1 validator

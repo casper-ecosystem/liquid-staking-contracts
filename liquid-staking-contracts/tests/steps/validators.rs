@@ -2,6 +2,8 @@ use crate::lst_world::LSTWorld;
 use cucumber::{given, then, when};
 use liquid_staking_contracts::token::Error;
 use odra_bdd::types::account::Account;
+use odra_modules::access::errors::Error::CallerNotTheOwner;
+use odra_modules::access::Ownable;
 
 #[given(expr = "Owner deploys a contract with Validator{int}")]
 fn deploy_with_validator(world: &mut LSTWorld, validator_num: u32) {
@@ -59,8 +61,8 @@ fn try_remove_validator(world: &mut LSTWorld, account: Account, validator_num: u
 
     assert_eq!(
         result.unwrap_err(),
-        Error::NotAnOwner.into(),
-        "Expected NotAnOwner error when unprivileged account tries to remove validator"
+        CallerNotTheOwner.into(),
+        "Expected CallerNotTheOwner error when unprivileged account tries to remove validator"
     );
 }
 
@@ -77,7 +79,7 @@ fn try_add_validator(world: &mut LSTWorld, account: Account, validator_num: u32)
 
     assert_eq!(
         result.unwrap_err(),
-        Error::NotAnOwner.into(),
+        CallerNotTheOwner.into(),
         "Expected NotAnOwner error when unprivileged account tries to add validator"
     );
 }

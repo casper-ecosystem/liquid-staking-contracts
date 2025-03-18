@@ -4,7 +4,7 @@ use odra::{
     prelude::*,
 };
 use odra_modules::{
-    access::{AccessControl, Ownable, Role, DEFAULT_ADMIN_ROLE},
+    access::Ownable,
     cep18::{errors::Error as Cep18Error, utils::Cep18Modality},
     cep18_token::Cep18,
 };
@@ -48,7 +48,6 @@ pub struct Claimed {
     errors = Error
 )]
 pub struct StakedCSPR {
-    access_control: SubModule<AccessControl>,
     ownable: SubModule<Ownable>,
     token: SubModule<Cep18>,
     unstake_ids: Mapping<Address, Vec<u32>>,
@@ -64,6 +63,9 @@ pub struct StakedCSPR {
     loose_tokens: Var<Vec<LooseToken>>,
 }
 
+/// Unstake struct
+/// It is used to store the unstake information for each user
+/// as the unstake needs to wait for the unbonding delay before it can be claimed
 #[odra::odra_type]
 struct Unstake {
     unstake_id: u32,
@@ -73,6 +75,7 @@ struct Unstake {
     claimed: bool,
 }
 
+// TODO: Remove this type
 #[odra::odra_type]
 pub struct LooseToken {
     pub amount: U512,
@@ -82,12 +85,6 @@ pub struct LooseToken {
 #[odra::module]
 impl StakedCSPR {
     delegate! {
-        to self.access_control {
-            fn has_role(&self, role: &Role, address: &Address) -> bool;
-            fn grant_role(&mut self, role: &Role, address: &Address);
-            fn revoke_role(&mut self, role: &Role, address: &Address);
-        }
-
         to self.token {
             fn name(&self) -> String;
             fn symbol(&self) -> String;
@@ -109,14 +106,16 @@ impl StakedCSPR {
             fn mint(&mut self, owner: &Address, amount: &U256);
             fn burn(&mut self, owner: &Address, amount: &U256);
         }
+
+        to self.ownable {
+            fn get_owner(&self) -> Address;
+        }
     }
 
     pub fn init(&mut self, validator_address: PublicKey, claim_time: u64, fee_percentage: U512) {
         let admin = self.env().caller();
 
-        // Grant the admin role to the deployer.
-        self.access_control
-            .unchecked_grant_role(&DEFAULT_ADMIN_ROLE, &admin);
+        // Grant the admin role
         self.ownable.init(admin);
 
         // Initialize the validator address.
@@ -185,7 +184,6 @@ impl StakedCSPR {
             claimed: false,
         });
 
-        // FIXME: unstake_ids per user can potentially overflow.
         self.unstake_ids.set(&caller, account_unstake_ids);
         self.unclaimed_cspr
             .set(self.unclaimed_cspr.get().unwrap_or_default() + cspr_amount);
@@ -271,12 +269,7 @@ impl StakedCSPR {
     }
 
     pub fn withdraw_from_the_pool(&mut self, amount: U512) {
-        if !self
-            .access_control
-            .has_role(&DEFAULT_ADMIN_ROLE, &self.env().caller())
-        {
-            self.env().revert(NotAnOwner);
-        }
+        self.ownable.assert_owner(&self.env().caller());
 
         if !self.env().self_balance() < amount {
             self.env().revert(InsufficientBalance);
@@ -287,34 +280,12 @@ impl StakedCSPR {
 
     /// Used as a helper for testing
     /// TODO: Remove before production
-    pub fn state_report(&self) -> String {
-        format!(
-            "Staked CSPR: {} Unclaimed CSPR: {}, Admin sCSPR: {}",
-            self.staked_cspr(),
-            self.unclaimed_cspr.get().unwrap_or_default(),
-            self.token.balance_of(&self.ownable.get_owner())
-        )
-    }
-
-    /// Used as a helper for testing
-    /// TODO: Remove before production
     pub fn self_balance(&self) -> U512 {
         self.env().self_balance()
     }
 
-    /// Used as a helper for testing
-    /// TODO: Remove before production
-    pub fn collect(&mut self) {
-        self.collect_fee();
-    }
-
     pub fn add_validator(&mut self, public_key: PublicKey) {
-        if !self
-            .access_control
-            .has_role(&DEFAULT_ADMIN_ROLE, &self.env().caller())
-        {
-            self.env().revert(NotAnOwner);
-        }
+        self.ownable.assert_owner(&self.env().caller());
 
         let mut validators = self.validators.get().unwrap_or_default();
 
@@ -326,12 +297,7 @@ impl StakedCSPR {
     }
 
     pub fn remove_validator(&mut self, public_key: PublicKey) {
-        if !self
-            .access_control
-            .has_role(&DEFAULT_ADMIN_ROLE, &self.env().caller())
-        {
-            self.env().revert(NotAnOwner);
-        }
+        self.ownable.assert_owner(&self.env().caller());
 
         let mut validators = self.validators.get().unwrap_or_default();
 
@@ -634,7 +600,7 @@ mod tests {
                 fee_percentage: 1000.into(),
             },
         );
-        assert!(token.has_role(&DEFAULT_ADMIN_ROLE, &env.caller()));
+        assert!(token.get_owner() == env.caller());
     }
 
     #[test]
