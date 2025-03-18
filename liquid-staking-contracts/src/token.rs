@@ -52,7 +52,6 @@ pub struct StakedCSPR {
     token: SubModule<Cep18>,
     unstake_ids: Mapping<Address, Vec<u32>>,
     unstakes: List<Unstake>,
-    unclaimed_cspr: Var<U512>,
     validators: Var<Vec<PublicKey>>,
     /// Stored configuration of the time it takes for unstaked tokens to be claimable
     claim_time: Var<u64>,
@@ -176,8 +175,6 @@ impl StakedCSPR {
         });
 
         self.unstake_ids.set(&caller, account_unstake_ids);
-        self.unclaimed_cspr
-            .set(self.unclaimed_cspr.get().unwrap_or_default() + cspr_amount);
 
         self.env().emit_event(Unstaked {
             address: caller,
@@ -192,34 +189,40 @@ impl StakedCSPR {
         new_unstake_id
     }
 
-    pub fn claim(&mut self, unstake_id: u32) {
-        let mut unstake = self
-            .unstakes
-            .get(unstake_id)
-            .unwrap_or_revert_with(self, UnstakeNotFound);
-        if unstake.claimable_from > self.env().get_block_time() {
-            self.env().revert(NotYetClaimable);
-        }
-        if unstake.claimed {
-            self.env().revert(AlreadyClaimed);
-        }
+    pub fn claim(&mut self) {
         let caller = self.env().caller();
-        if unstake.owner != caller {
-            self.env().revert(NotAnOwnerOfAClaim);
+        let mut unstake_ids = self
+            .unstake_ids
+            .get(&self.env().caller())
+            .unwrap_or_default();
+        for (index, unstake_id) in unstake_ids.clone().iter().enumerate() {
+            let mut unstake = self
+                .unstakes
+                .get(*unstake_id)
+                .unwrap_or_revert_with(self, UnstakeNotFound);
+            if unstake.claimable_from > self.env().get_block_time() {
+                continue;
+            }
+            if unstake.claimed {
+                continue;
+            }
+            if unstake.owner != caller {
+                continue;
+            }
+
+            let cspr_amount = unstake.cspr_amount;
+            self.env().transfer_tokens(&unstake.owner, &cspr_amount);
+            unstake.claimed = true;
+            self.unstakes.replace(*unstake_id, unstake);
+            unstake_ids.remove(index);
+
+            self.env().emit_event(Claimed {
+                address: caller,
+                cspr_amount,
+                unstake_id: *unstake_id,
+            });
         }
-
-        let cspr_amount = unstake.cspr_amount;
-        self.env().transfer_tokens(&unstake.owner, &cspr_amount);
-        unstake.claimed = true;
-        self.unclaimed_cspr
-            .set(self.unclaimed_cspr.get().unwrap_or_default() - cspr_amount);
-        self.unstakes.replace(unstake_id, unstake);
-
-        self.env().emit_event(Claimed {
-            address: caller,
-            cspr_amount,
-            unstake_id,
-        });
+        self.unstake_ids.set(&caller, unstake_ids);
     }
 
     pub fn staked_cspr(&self) -> U512 {
@@ -248,6 +251,7 @@ impl StakedCSPR {
     }
 
     pub fn remove_from_the_pool(&mut self, amount: U512) {
+        self.ownable.assert_owner(&self.env().caller());
         self.collect_fee();
         let actual_unstaked = self.undelegate_from_validators(amount);
 
@@ -682,7 +686,7 @@ mod tests {
         state_writer.write_state("after_unbonding", &token, total_delays);
 
         // After Alice claims
-        token.claim(0);
+        token.claim();
         state_writer.write_state("after_alice_claim", &token, total_delays);
 
         // Verify final state
@@ -751,7 +755,7 @@ mod tests {
 
         // And bob claims his unstake.
         env.set_caller(bob);
-        token.claim(0);
+        token.claim();
 
         // // Then Bob's CSPR balance should be 10 CSPR more.
         let expected_amount = bob_initial_cspr_balance + deposit_amount_u512;

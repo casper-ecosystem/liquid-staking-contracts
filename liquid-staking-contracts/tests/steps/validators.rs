@@ -1,9 +1,7 @@
 use crate::lst_world::LSTWorld;
 use cucumber::{given, then, when};
-use liquid_staking_contracts::token::Error;
 use odra_bdd::types::account::Account;
 use odra_modules::access::errors::Error::CallerNotTheOwner;
-use odra_modules::access::Ownable;
 
 #[given(expr = "Owner deploys a contract with Validator{int}")]
 fn deploy_with_validator(world: &mut LSTWorld, validator_num: u32) {

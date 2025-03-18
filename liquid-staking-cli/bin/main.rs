@@ -11,7 +11,7 @@ impl odra_cli::deploy::DeployScript for DeployScript {
     ) -> Result<(), odra_cli::deploy::Error> {
         env.set_gas(250_000_000_000);
         let token = StakedCSPR::try_deploy(
-            &env,
+            env,
             StakedCSPRInitArgs {
                 validator_address: env.get_validator(0),
                 claim_time: env.auction_delay() * 8,

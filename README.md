@@ -5,6 +5,13 @@ It contains two projects:
   [StakedCSPR](liquid-staking-contracts/src/token.rs) contract is implemented.
 - `liquid-staking-cli` - this is where the CLI tool is implemented.
 
+## Testing
+To run the tests suite, you can use the following command:
+
+```bash
+$ just test
+```
+
 ## Liquid Staking CLI
 
 ```bash
@@ -47,6 +54,7 @@ $ just cli contract StakedCSPR balance_of \
 💁  INFO : Command executed successfully
 ```
 Remember about `.env` file.
+
 
 ## Testnet Instance
 

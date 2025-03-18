@@ -10,7 +10,7 @@ Feature: Liquid Staking features
     Then Alice's token balance is 50 sCSPR
     And Alice's CSPR balance is 0 CSPR
     When unbonding period passes
-    And Alice claims unstake with id 0
+    And Alice claims unstakes
     Then Alice has 50 CSPR
     And total supply is 50 sCSPR
 
@@ -20,7 +20,7 @@ Feature: Liquid Staking features
     And Owner adds 100 CSPR to the pool
     And Alice unstakes 100 sCSPR
     And unbonding period passes
-    And Alice claims unstake with id 0
+    And Alice claims unstakes
     Then Alice has 200 CSPR
 
   Scenario: Staking by multiple accounts
@@ -40,7 +40,8 @@ Feature: Liquid Staking features
     And Bob's CSPR balance is 0 CSPR
     And staked CSPR is 150 CSPR
     When unbonding period passes
-    And Alice claims unstake with id 0
+    And Alice claims unstakes
+    And Bob claims unstakes
     Then Alice has 50 CSPR
     And Bob has 0 CSPR
     And total supply is 150 sCSPR
@@ -54,8 +55,8 @@ Feature: Liquid Staking features
     And Alice unstakes 50 sCSPR
     And Bob unstakes 150 sCSPR
     And unbonding period passes
-    And Alice claims unstake with id 0
-    And Bob claims unstake with id 1
+    And Alice claims unstakes
+    And Bob claims unstakes
     Then Alice has 75 CSPR
     And Bob has 225 CSPR
 
@@ -73,7 +74,7 @@ Feature: Liquid Staking features
     And staked CSPR is 0.000000099 CSPR
     When unbonding period passes
     Then staked CSPR is 0.000001098 CSPR
-    When Alice claims unstake with id 0
+    When Alice claims unstakes
     Then Alice has 10.000000900 CSPR
     And total supply is 0.000000098 sCSPR
     And staked CSPR is 0.000001098 CSPR

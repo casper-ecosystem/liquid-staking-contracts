@@ -7,7 +7,7 @@ Feature: Administration fees
     Then more than 100 CSPR is staked
     When Alice unstakes everything
     And unbonding period passes
-    And Alice claims unstake with id 0
+    And Alice claims unstakes
     Then Alice has more than 100 CSPR
     And Owner has more than 0 sCSPR
 
@@ -20,12 +20,12 @@ Feature: Administration fees
     And Owner has 0 sCSPR
     When Alice unstakes everything
     And unbonding period passes
-    And Alice claims unstake with id 0
+    And Alice claims unstakes
     Then Alice has 100.000009 CSPR
     And Owner has 0.000000998 sCSPR
     When Owner unstakes everything
     And unbonding period passes
-    And Owner claims unstake with id 1
+    And Owner claims unstakes
     Then Owner has 0.00001 CSPR
     And 0.0000009 CSPR is staked
     And 0.00000009 sCSPR is in the pool
@@ -39,12 +39,12 @@ Feature: Administration fees
     And Owner has 0 sCSPR
     When Alice unstakes everything
     And unbonding period passes
-    And Alice claims unstake with id 0
+    And Alice claims unstakes
     Then Alice has 100.001 CSPR
     And Owner has 0.000099989 sCSPR
     When Owner unstakes everything
     And unbonding period passes
-    And Owner claims unstake with id 1
+    And Owner claims unstakes
     Then Owner has 0.0001 CSPR
     And 0.00000099 CSPR is staked
     And 0.000000908 sCSPR is in the pool

@@ -26,10 +26,10 @@ fn unstake_everything(world: &mut LSTWorld, account: Account) {
     world.update_pool_state("unstake_everything");
 }
 
-#[when(expr = "{account} claims unstake with id {int}")]
-fn claim_unstake(world: &mut LSTWorld, account: Account, unstake_id: u32) {
+#[when(expr = "{account} claims unstakes")]
+fn claim_unstake(world: &mut LSTWorld, account: Account) {
     world.env.set_caller(&account);
-    world.token.claim(unstake_id);
+    world.token.claim();
     world.update_pool_state("claim_unstake");
 }
 
