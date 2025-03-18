@@ -30,4 +30,4 @@ Feature: Multiple Validators
 
   Scenario: Removing a validator that is not in the list
     When Owner removes Validator3
-    And contract has 1 validator
+    Then contract has 1 validator

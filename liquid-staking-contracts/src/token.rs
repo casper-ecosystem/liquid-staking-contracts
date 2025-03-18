@@ -341,17 +341,19 @@ impl StakedCSPR {
             validators.remove(position);
             self.validators.set(validators);
 
-            // Unstake all the stake from the validator
+            // Unstake all the stake from the validator, but only if there is some stake
             let cspr_amount = self.env().delegated_amount(public_key.clone());
-            self.env().undelegate(public_key, cspr_amount);
+            if cspr_amount > U512::zero() {
+                self.env().undelegate(public_key, cspr_amount);
 
-            // Mark the amount as loose tokens to be staked again
-            let mut loose_tokens = self.loose_tokens.get().unwrap_or_default();
-            loose_tokens.push(LooseToken {
-                amount: cspr_amount,
-                available_from: self.env().get_block_time() + self.next_claim_time(),
-            });
-            self.loose_tokens.set(loose_tokens);
+                // Mark the amount as loose tokens to be staked again
+                let mut loose_tokens = self.loose_tokens.get().unwrap_or_default();
+                loose_tokens.push(LooseToken {
+                    amount: cspr_amount,
+                    available_from: self.env().get_block_time() + self.next_claim_time(),
+                });
+                self.loose_tokens.set(loose_tokens);
+            }
         }
         // If validator doesn't exist, do nothing
     }

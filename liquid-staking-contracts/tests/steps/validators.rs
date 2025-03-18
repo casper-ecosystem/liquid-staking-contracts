@@ -52,7 +52,6 @@ fn try_remove_validator(world: &mut LSTWorld, account: Account, validator_num: u
     world.env.set_caller(&account);
     let validator_address = world.env.env().get_validator(validator_num as usize - 1);
     let result = world.token.try_remove_validator(validator_address);
-
     assert!(
         result.is_err(),
         "Expected an error when unprivileged account tries to remove validator"
