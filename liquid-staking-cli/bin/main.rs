@@ -1,5 +1,5 @@
-use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRInitArgs};
-use odra::host::{Deployer, HostEnv};
+use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRInitArgs, MIN_STAKE};
+use odra::{casper_types::U512, host::{Deployer, HostEnv}};
 use odra_cli::OdraCli;
 
 pub struct DeployScript;
@@ -16,6 +16,7 @@ impl odra_cli::deploy::DeployScript for DeployScript {
                 validator_address: env.get_validator(0),
                 claim_time: env.auction_delay() * 8,
                 fee_percentage: 1000.into(),
+                min_stake: U512::from(MIN_STAKE),
             },
         )?;
         container.add_contract(&token)?;

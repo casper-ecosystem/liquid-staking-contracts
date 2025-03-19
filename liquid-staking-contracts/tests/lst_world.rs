@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ops::Deref, str::FromStr};
 
 use cucumber::{Parameter, World};
-use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRHostRef, StakedCSPRInitArgs};
+use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRHostRef, StakedCSPRInitArgs, MIN_STAKE};
 use odra::{
     casper_types::{PublicKey, U256, U512},
     host::Deployer,
@@ -26,6 +26,7 @@ impl Default for LSTWorld {
                 validator_address,
                 claim_time: env.env().auction_delay() * 8,
                 fee_percentage: 1000.into(),
+                min_stake: U512::from(MIN_STAKE),
             },
         );
         Self {

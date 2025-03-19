@@ -10,6 +10,8 @@ use odra_modules::{
     cep18_token::Cep18,
 };
 
+pub const MIN_STAKE: u128 = 500_000_000_000;
+
 /// Error enum for the StakedCSPR contract
 #[odra::odra_error]
 pub enum Error {
@@ -27,6 +29,8 @@ pub enum Error {
     InsufficientBalance = 61406,
     /// The validator is misconfigured
     MisconfiguredValidator = 61407,
+    /// The stake is below the minimum
+    StakeBelowMinimum = 61408,
 }
 
 /// Event emitted when a user stakes CSPR
@@ -88,6 +92,25 @@ pub struct Undelegated {
     validator: PublicKey,
 }
 
+/// Unstake struct
+/// It is used to store the unstake information for each user
+/// as the unstake needs to wait for the unbonding delay before it can be claimed
+#[odra::odra_type]
+struct Unstake {
+    /// The id of the unstake
+    unstake_id: u32,
+    /// The address of the owner of the unstake
+    owner: Address,
+    /// The amount of CSPR that was unstaked
+    cspr_amount: U512,
+    /// The time when the unstake will be claimable
+    claimable_from: u64,
+    /// Whether the unstake has been claimed
+    claimed: bool,
+}
+
+
+/// StakedCSPR contract
 #[odra::module(
     events = [Staked, Unstaked, Claimed, Delegated, Undelegated],
     errors = Error
@@ -110,23 +133,8 @@ pub struct StakedCSPR {
     last_recorded_delegated_amount: Var<U512>,
     /// Fee percentage to be charged for staking
     fee_percentage: Var<U512>,
-}
-
-/// Unstake struct
-/// It is used to store the unstake information for each user
-/// as the unstake needs to wait for the unbonding delay before it can be claimed
-#[odra::odra_type]
-struct Unstake {
-    /// The id of the unstake
-    unstake_id: u32,
-    /// The address of the owner of the unstake
-    owner: Address,
-    /// The amount of CSPR that was unstaked
-    cspr_amount: U512,
-    /// The time when the unstake will be claimable
-    claimable_from: u64,
-    /// Whether the unstake has been claimed
-    claimed: bool,
+    /// Minimum amount of CSPR that can be staked
+    min_stake: Var<U512>,
 }
 
 #[odra::module]
@@ -159,7 +167,7 @@ impl StakedCSPR {
         }
     }
 
-    pub fn init(&mut self, validator_address: PublicKey, claim_time: u64, fee_percentage: U512) {
+    pub fn init(&mut self, validator_address: PublicKey, claim_time: u64, fee_percentage: U512, min_stake: U512) {
         let admin = self.env().caller();
 
         // Grant the admin role
@@ -182,17 +190,19 @@ impl StakedCSPR {
 
         self.fee_percentage.set(fee_percentage);
         self.last_recorded_delegated_amount.set(U512::zero());
+        self.min_stake.set(min_stake);
     }
 
     /// Stakes CSPR
     /// This function is payable, the attached value is the amount of CSPR to stake
     #[odra(payable)]
     pub fn stake(&mut self) {
-        self.collect_fee();
-
         let caller = self.env().caller();
         let cspr_amount = self.env().attached_value();
         let scspr_amount = self.cspr_to_scspr(cspr_amount);
+
+        self.assert_min_stake(cspr_amount);
+        self.collect_fee();
 
         self.delegate(self.get_random_validators(1)[0].clone(), cspr_amount);
 
@@ -307,10 +317,23 @@ impl StakedCSPR {
         })
     }
 
+    /// Returns the minimum stake
+    pub fn get_min_stake(&self) -> U512 {
+        self.min_stake.get().unwrap_or_default()
+    }
+
+    /// Sets the minimum stake
+    pub fn set_min_stake(&mut self, min_stake: U512) {
+        self.ownable.assert_owner(&self.env().caller());
+        self.min_stake.set(min_stake);
+    }
+
     /// Adds CSPR to the pool
     /// This function is payable, the attached value is the amount of CSPR to add to the pool
     #[odra(payable)]
     pub fn add_to_the_pool(&mut self) {
+        let attached_value = self.env().attached_value();
+        self.assert_min_stake(attached_value);
         self.collect_fee();
         self.delegate(
             self.get_random_validators(1)[0].clone(),
@@ -388,8 +411,21 @@ impl StakedCSPR {
     /// Checks the amount of loose tokens (CSPR on the contract which is not staked
     /// or claimable) and delegates it to 3 random validators, equally divided
     pub fn restake_loose_tokens(&mut self) {
+        let min_stake = self.min_stake.get().unwrap_or_default();
         let loose_tokens = self.get_loose_tokens();
-        let validators = self.get_random_validators(3);
+
+        if loose_tokens < min_stake {
+            self.env().revert(InsufficientBalance);
+        }
+    
+        let validators_count =
+        if loose_tokens < min_stake * 3 {
+            (loose_tokens / min_stake).as_usize()
+        } else {    
+            3
+        };
+
+        let validators = self.get_random_validators(validators_count);
         let amount_to_delegate = loose_tokens / validators.len();
         for validator in validators.iter() {
             self.delegate(validator.clone(), amount_to_delegate);
@@ -597,6 +633,13 @@ impl StakedCSPR {
 
         total_amount - remaining_amount // Return the actual amount undelegated
     }
+
+    fn assert_min_stake(&self, stake: U512) {
+        let min_stake = self.min_stake.get().unwrap_or_default();
+        if stake < min_stake {
+            self.env().revert(StakeBelowMinimum);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -684,6 +727,7 @@ mod tests {
                 validator_address: env.get_validator(0),
                 claim_time: env.auction_delay() * 8,
                 fee_percentage: 1000.into(),
+                min_stake: U512::from(MIN_STAKE),
             },
         );
         assert!(token.get_owner() == env.caller());
@@ -699,6 +743,7 @@ mod tests {
                 validator_address: env.get_validator(0),
                 claim_time: env.auction_delay() * 8,
                 fee_percentage: 100.into(),
+                min_stake: U512::from(MIN_STAKE),
             },
         );
         // Given Alice and Bob.
@@ -752,6 +797,7 @@ mod tests {
                 validator_address: env.get_validator(0),
                 claim_time: unbonding_delay,
                 fee_percentage: 1000.into(),
+                min_stake: U512::from(MIN_STAKE),
             },
         );
 
@@ -814,6 +860,7 @@ mod tests {
                 validator_address: env.get_validator(0),
                 claim_time: env.auction_delay() * 8,
                 fee_percentage: 1000.into(),
+                min_stake: U512::from(MIN_STAKE),
             },
         );
 
@@ -876,6 +923,7 @@ mod tests {
                 validator_address: initial_validator.clone(),
                 claim_time: env.auction_delay() * 8,
                 fee_percentage: 1000.into(),
+                min_stake: U512::from(MIN_STAKE),
             },
         );
 
