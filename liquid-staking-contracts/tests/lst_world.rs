@@ -44,7 +44,12 @@ impl LSTWorld {
         let validators = self.token.get_validators();
         let pool_state = validators
             .iter()
-            .map(|validator| (validator.clone(), self.token.get_validator_stake(validator)))
+            .map(|validator| {
+                (
+                    validator.clone(),
+                    self.token.get_validator_stake(validator.clone()),
+                )
+            })
             .collect();
         self.pool_state.push((entrypoint.to_string(), pool_state));
     }
@@ -54,10 +59,7 @@ impl LSTWorld {
         let validators = self.token.get_validators();
         let mut current_stakes = HashMap::new();
         for validator in validators {
-            current_stakes.insert(
-                validator.clone(),
-                self.token.get_validator_stake(&validator),
-            );
+            current_stakes.insert(validator.clone(), self.token.get_validator_stake(validator));
         }
         current_stakes
     }

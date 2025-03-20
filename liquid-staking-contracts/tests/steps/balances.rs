@@ -52,7 +52,7 @@ fn check_more_than_staked_cspr(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
 #[then(expr = "Validator{int} has {cspr_amount} CSPR in his staking pool")]
 fn check_validator_stake(world: &mut LSTWorld, validator_num: u32, cspr_amount: CSPRAmount) {
     let validator_address = world.env.env().get_validator(validator_num as usize - 1);
-    let validator_stake = world.token.get_validator_stake(&validator_address);
+    let validator_stake = world.token.get_validator_stake(validator_address);
     assert_eq!(validator_stake, cspr_amount.amount());
 }
 
@@ -95,7 +95,7 @@ fn check_total_validator_stakes(world: &mut LSTWorld, expected_total: CSPRAmount
 
     // Sum up stakes across all validators
     let total_stake = validators.iter().fold(U512::zero(), |acc, validator| {
-        acc + world.token.get_validator_stake(validator)
+        acc + world.token.get_validator_stake(validator.clone())
     });
 
     // Check that total stake matches expected amount

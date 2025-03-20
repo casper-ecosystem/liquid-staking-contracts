@@ -151,12 +151,15 @@ impl StakedCSPR {
     pub fn stake(&mut self) {
         let caller = self.env().caller();
         let cspr_amount = self.env().attached_value();
-        let scspr_amount = self.cspr_to_scspr(cspr_amount);
+
+        let staked_cspr_before = self.staked_cspr();
 
         self.assert_min_stake(cspr_amount);
-        self.collect_fee();
+        self.collect_fee(staked_cspr_before);
 
         self.delegate(self.get_random_validators(1)[0].clone(), cspr_amount);
+
+        let scspr_amount = self.cspr_to_scspr(cspr_amount, staked_cspr_before);
 
         self.token.raw_mint(&caller, &scspr_amount);
 
@@ -166,7 +169,8 @@ impl StakedCSPR {
             scspr_minted: scspr_amount,
         });
 
-        self.last_recorded_delegated_amount.set(self.staked_cspr());
+        let staked_cspr_after = staked_cspr_before + cspr_amount;
+        self.last_recorded_delegated_amount.set(staked_cspr_after);
     }
 
     /// Unstakes sCSPR
@@ -175,7 +179,7 @@ impl StakedCSPR {
     ///
     /// * `scspr_amount` - The amount of sCSPR to unstake
     pub fn unstake(&mut self, scspr_amount: U256) {
-        self.collect_fee();
+        self.collect_fee(self.staked_cspr());
 
         let caller = self.env().caller();
 
@@ -287,7 +291,8 @@ impl StakedCSPR {
     pub fn add_to_the_pool(&mut self) {
         let attached_value = self.env().attached_value();
         self.assert_min_stake(attached_value);
-        self.collect_fee();
+        let staked_cspr = self.staked_cspr();
+        self.collect_fee(staked_cspr);
         self.delegate(
             self.get_random_validators(1)[0].clone(),
             self.env().attached_value(),
@@ -298,13 +303,15 @@ impl StakedCSPR {
             amount: attached_value,
         });
 
-        self.last_recorded_delegated_amount.set(self.staked_cspr());
+        self.last_recorded_delegated_amount
+            .set(staked_cspr + attached_value);
     }
 
     /// Removes CSPR from the pool
     pub fn remove_from_the_pool(&mut self, amount: U512) {
         self.ownable.assert_owner(&self.env().caller());
-        self.collect_fee();
+        let staked_cspr = self.staked_cspr();
+        self.collect_fee(staked_cspr);
         let actual_unstaked = self.undelegate_from_validators(amount);
 
         // If we couldn't undelegate the full amount, revert
@@ -317,7 +324,8 @@ impl StakedCSPR {
             amount: actual_unstaked,
         });
 
-        self.last_recorded_delegated_amount.set(self.staked_cspr());
+        self.last_recorded_delegated_amount
+            .set(staked_cspr - amount);
     }
 
     /// Withdraws CSPR from the contract
@@ -412,15 +420,15 @@ impl StakedCSPR {
     }
 
     /// Returns the amount of CSPR that is delegated to a validator
-    pub fn get_validator_stake(&self, validator: &PublicKey) -> U512 {
-        self.env().delegated_amount(validator.clone())
+    pub fn get_validator_stake(&self, validator: PublicKey) -> U512 {
+        self.env().delegated_amount(validator)
     }
 
     /// Returns the total amount of stake on the contract
     pub fn get_total_stake(&self) -> U512 {
         let mut total = U512::zero();
         for validator in self.get_validators() {
-            total += self.get_validator_stake(&validator);
+            total += self.get_validator_stake(validator);
         }
         total
     }
@@ -457,8 +465,7 @@ impl StakedCSPR {
         now + claim_time
     }
 
-    fn cspr_to_scspr(&self, cspr_stake: U512) -> U256 {
-        let staked_cspr = self.staked_cspr();
+    fn cspr_to_scspr(&self, cspr_stake: U512, staked_cspr: U512) -> U256 {
         if staked_cspr.is_zero() {
             return cspr_stake.to_u256().unwrap_or_revert(self);
         }
@@ -481,10 +488,8 @@ impl StakedCSPR {
         (scspr).to_u512() * staked_cspr / scspr_total_supply
     }
 
-    /// Calculates the rewards since last collection and mints the fee in the form of
-    /// sCSPR to the admin.
-    fn collect_fee(&mut self) {
-        let current_delegated = self.staked_cspr();
+    /// Calculates the rewards since last collection and mints the fee
+    fn collect_fee(&mut self, current_delegated: U512) {
         let last_recorded = self.last_recorded_delegated_amount.get_or_default();
 
         // First time delegation, set the last recorded delegation and bail, as there is no reward
@@ -500,12 +505,11 @@ impl StakedCSPR {
             // Fee calculation: fee = reward * fee_percentage / 10000 (basis points)
             let fee = reward * fee_percent / U512::from(10000u64);
             // Calculate fee_scspr based on total staked amount of cspr and total liquidity of scspr
-            let total_staked_cspr = self.staked_cspr();
             let total_scspr_liquidity = self.token.total_supply().to_u512();
-            let fee_scspr = if total_staked_cspr.is_zero() || total_scspr_liquidity.is_zero() {
+            let fee_scspr = if current_delegated.is_zero() || total_scspr_liquidity.is_zero() {
                 U256::zero()
             } else {
-                (fee * total_scspr_liquidity / total_staked_cspr)
+                (fee * total_scspr_liquidity / current_delegated)
                     .to_u256()
                     .unwrap_or_revert(self)
             };
