@@ -35,6 +35,8 @@ pub enum Error {
     MisconfiguredValidator = 61407,
     /// The stake is below the minimum
     StakeBelowMinimum = 61408,
+    /// Total unstakes overflowed
+    TotalUnstakesOverflow = 61409,
 }
 
 /// Unstake struct
@@ -212,8 +214,7 @@ impl StakedCSPR {
 
         self.unstake_ids.set(&caller, account_unstake_ids);
 
-        self.total_unstakes
-            .set(self.total_unstakes.get_or_default() + cspr_amount);
+        self.total_unstakes.add(cspr_amount);
 
         self.env().emit_event(Unstaked {
             address: caller,
@@ -246,8 +247,12 @@ impl StakedCSPR {
             unstake.claimed = true;
             self.unstakes.replace(*unstake_id, unstake);
             unstake_ids.remove(index);
-            self.total_unstakes
-                .set(self.total_unstakes.get_or_default() - cspr_amount);
+            self.total_unstakes.set(
+                self.total_unstakes
+                    .get_or_default()
+                    .checked_sub(cspr_amount)
+                    .unwrap_or_revert_with(self, AlreadyClaimed),
+            );
             self.env().emit_event(Claimed {
                 address: caller,
                 cspr_amount,
@@ -436,7 +441,10 @@ impl StakedCSPR {
     /// Returns the amount of loose tokens (CSPR on the contract which is not staked
     /// or claimable)
     pub fn get_loose_tokens(&self) -> U512 {
-        self.env().self_balance() - self.total_unstakes.get_or_default()
+        // We allow saturating sub because there may be cspr we are still waiting to be unstaked
+        self.env()
+            .self_balance()
+            .saturating_sub(self.total_unstakes.get_or_default())
     }
 }
 
