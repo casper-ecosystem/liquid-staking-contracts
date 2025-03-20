@@ -194,7 +194,7 @@ impl StakedCSPR {
         self.token.raw_burn(&caller, &scspr_amount);
 
         // To keep track of the unstakes, we assign them an id
-        let mut account_unstake_ids = self.unstake_ids.get(&caller).unwrap_or_default();
+        let mut account_unstake_ids = self.unstake_ids.get_or_default(&caller);
         let new_unstake_id = self.unstakes.len();
         account_unstake_ids.push(new_unstake_id);
 
@@ -209,7 +209,7 @@ impl StakedCSPR {
         self.unstake_ids.set(&caller, account_unstake_ids);
 
         self.total_unstakes
-            .set(self.total_unstakes.get().unwrap_or_default() + cspr_amount);
+            .set(self.total_unstakes.get_or_default() + cspr_amount);
 
         self.env().emit_event(Unstaked {
             address: caller,
@@ -226,10 +226,7 @@ impl StakedCSPR {
     /// It checks all claims that are claimable and claims them for the caller
     pub fn claim(&mut self) {
         let caller = self.env().caller();
-        let mut unstake_ids = self
-            .unstake_ids
-            .get(&self.env().caller())
-            .unwrap_or_default();
+        let mut unstake_ids = self.unstake_ids.get_or_default(&self.env().caller());
 
         for (index, unstake_id) in unstake_ids.clone().iter().enumerate() {
             let mut unstake = self
@@ -246,7 +243,7 @@ impl StakedCSPR {
             self.unstakes.replace(*unstake_id, unstake);
             unstake_ids.remove(index);
             self.total_unstakes
-                .set(self.total_unstakes.get().unwrap_or_default() - cspr_amount);
+                .set(self.total_unstakes.get_or_default() - cspr_amount);
             self.env().emit_event(Claimed {
                 address: caller,
                 cspr_amount,
@@ -275,7 +272,7 @@ impl StakedCSPR {
 
     /// Returns the minimum stake
     pub fn get_min_stake(&self) -> U512 {
-        self.min_stake.get().unwrap_or_default()
+        self.min_stake.get_or_default()
     }
 
     /// Sets the minimum stake
@@ -344,7 +341,7 @@ impl StakedCSPR {
     pub fn add_validator(&mut self, public_key: PublicKey) {
         self.ownable.assert_owner(&self.env().caller());
 
-        let mut validators = self.validators.get().unwrap_or_default();
+        let mut validators = self.validators.get_or_default();
 
         // Check if the validator already exists in the list
         if !validators.contains(&public_key) {
@@ -362,7 +359,7 @@ impl StakedCSPR {
     pub fn remove_validator(&mut self, public_key: PublicKey) {
         self.ownable.assert_owner(&self.env().caller());
 
-        let mut validators = self.validators.get().unwrap_or_default();
+        let mut validators = self.validators.get_or_default();
 
         // Find the position of the validator in the list
         if let Some(position) = validators.iter().position(|v| v == &public_key) {
@@ -388,7 +385,7 @@ impl StakedCSPR {
     /// Checks the amount of loose tokens (CSPR on the contract which is not staked
     /// or claimable) and delegates it to 3 random validators, equally divided
     pub fn restake_loose_tokens(&mut self) {
-        let min_stake = self.min_stake.get().unwrap_or_default();
+        let min_stake = self.min_stake.get_or_default();
         let loose_tokens = self.get_loose_tokens();
 
         if loose_tokens < min_stake {
@@ -411,7 +408,7 @@ impl StakedCSPR {
 
     /// Returns the list of validators
     pub fn get_validators(&self) -> Vec<PublicKey> {
-        self.validators.get().unwrap_or_default()
+        self.validators.get_or_default()
     }
 
     /// Returns the amount of CSPR that is delegated to a validator
@@ -431,7 +428,7 @@ impl StakedCSPR {
     /// Returns the amount of loose tokens (CSPR on the contract which is not staked
     /// or claimable)
     pub fn get_loose_tokens(&self) -> U512 {
-        self.env().self_balance() - self.total_unstakes.get().unwrap_or_default()
+        self.env().self_balance() - self.total_unstakes.get_or_default()
     }
 }
 
@@ -456,7 +453,7 @@ impl StakedCSPR {
 
     fn next_claim_time(&self) -> u64 {
         let now = self.env().get_block_time();
-        let claim_time = self.claim_time.get().unwrap_or_default();
+        let claim_time = self.claim_time.get_or_default();
         now + claim_time
     }
 
@@ -488,10 +485,7 @@ impl StakedCSPR {
     /// sCSPR to the admin.
     fn collect_fee(&mut self) {
         let current_delegated = self.staked_cspr();
-        let last_recorded = self
-            .last_recorded_delegated_amount
-            .get()
-            .unwrap_or_default();
+        let last_recorded = self.last_recorded_delegated_amount.get_or_default();
 
         // First time delegation, set the last recorded delegation and bail, as there is no reward
         if last_recorded.is_zero() {
@@ -502,7 +496,7 @@ impl StakedCSPR {
         // Only calculate rewards if delegation has increased.
         if current_delegated > last_recorded {
             let reward = current_delegated - last_recorded;
-            let fee_percent = self.fee_percentage.get().unwrap_or_default();
+            let fee_percent = self.fee_percentage.get_or_default();
             // Fee calculation: fee = reward * fee_percentage / 10000 (basis points)
             let fee = reward * fee_percent / U512::from(10000u64);
             // Calculate fee_scspr based on total staked amount of cspr and total liquidity of scspr
@@ -606,7 +600,7 @@ impl StakedCSPR {
     }
 
     fn assert_min_stake(&self, stake: U512) {
-        let min_stake = self.min_stake.get().unwrap_or_default();
+        let min_stake = self.min_stake.get_or_default();
         if stake < min_stake {
             self.env().revert(StakeBelowMinimum);
         }
