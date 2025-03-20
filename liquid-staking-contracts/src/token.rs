@@ -1,3 +1,7 @@
+use crate::events::{
+    Claimed, CsprAddedToPool, CsprRemovedFromPool, Delegated, Staked, Undelegated, Unstaked,
+    ValidatorAdded, ValidatorRemoved,
+};
 use crate::token::Error::*;
 use odra::{
     casper_types::{PublicKey, U256, U512},
@@ -33,65 +37,6 @@ pub enum Error {
     StakeBelowMinimum = 61408,
 }
 
-/// Event emitted when a user stakes CSPR
-#[odra::event]
-pub struct Staked {
-    /// The address of the user who staked the CSPR
-    address: Address,
-    /// The amount of CSPR that was staked
-    cspr_amount: U512,
-    /// The amount of sCSPR that was minted
-    scspr_minted: U256,
-}
-
-/// Event emitted when a user unstakes CSPR
-#[odra::event]
-pub struct Unstaked {
-    /// The address of the user who unstaked the CSPR
-    address: Address,
-    /// The amount of CSPR that was unstaked
-    cspr_amount: U512,
-    /// The amount of sCSPR that was burned
-    scspr_burned: U256,
-    /// The id of the unstake
-    unstake_id: u32,
-    /// The time when the unstake will be claimable
-    claim_time: u64,
-}
-
-/// Event emitted when a user claims their unstaked CSPR
-#[odra::event]
-pub struct Claimed {
-    /// The address of the user who claimed the unstake
-    address: Address,
-    /// The amount of CSPR that was claimed
-    cspr_amount: U512,
-    /// The id of the unstake
-    unstake_id: u32,
-}
-
-/// Event emitted when a user delegates CSPR to a validator
-#[odra::event]
-pub struct Delegated {
-    /// The address of the user who delegated the CSPR
-    address: Address,
-    /// The amount of CSPR that was delegated
-    amount: U512,
-    /// The validator that the CSPR was delegated to
-    validator: PublicKey,
-}
-
-/// Event emitted when a user undelegates CSPR from a validator
-#[odra::event]
-pub struct Undelegated {
-    /// The address of the user who undelegated the CSPR
-    address: Address,
-    /// The amount of CSPR that was undelegated
-    amount: U512,
-    /// The validator that the CSPR was undelegated from
-    validator: PublicKey,
-}
-
 /// Unstake struct
 /// It is used to store the unstake information for each user
 /// as the unstake needs to wait for the unbonding delay before it can be claimed
@@ -111,7 +56,7 @@ struct Unstake {
 
 /// StakedCSPR contract
 #[odra::module(
-    events = [Staked, Unstaked, Claimed, Delegated, Undelegated],
+    events = [Staked, Unstaked, Claimed, Delegated, Undelegated, ValidatorRemoved, ValidatorAdded, CsprAddedToPool, CsprRemovedFromPool],
     errors = Error
 )]
 pub struct StakedCSPR {
@@ -350,6 +295,12 @@ impl StakedCSPR {
             self.get_random_validators(1)[0].clone(),
             self.env().attached_value(),
         );
+
+        // Emit event for adding CSPR to the pool
+        self.env().emit_event(CsprAddedToPool {
+            amount: attached_value,
+        });
+
         self.last_recorded_delegated_amount.set(self.staked_cspr());
     }
 
@@ -363,6 +314,11 @@ impl StakedCSPR {
         if actual_unstaked < amount {
             self.env().revert(InsufficientBalance);
         }
+
+        // Emit event for removing CSPR from the pool
+        self.env().emit_event(CsprRemovedFromPool {
+            amount: actual_unstaked,
+        });
 
         self.last_recorded_delegated_amount.set(self.staked_cspr());
     }
@@ -392,8 +348,13 @@ impl StakedCSPR {
 
         // Check if the validator already exists in the list
         if !validators.contains(&public_key) {
-            validators.push(public_key);
+            validators.push(public_key.clone());
             self.validators.set(validators);
+
+            // Emit event for adding a validator
+            self.env().emit_event(ValidatorAdded {
+                validator: public_key,
+            });
         }
     }
 
@@ -408,6 +369,11 @@ impl StakedCSPR {
             // Only remove if the validator exists
             validators.remove(position);
             self.validators.set(validators);
+
+            // Emit event for removing a validator
+            self.env().emit_event(ValidatorRemoved {
+                validator: public_key.clone(),
+            });
 
             // Unstake all the stake from the validator, but only if there is some stake
             let cspr_amount = self.env().delegated_amount(public_key.clone());
