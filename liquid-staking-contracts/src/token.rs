@@ -182,6 +182,7 @@ impl StakedCSPR {
     /// * `scspr_amount` - The amount of sCSPR to unstake
     pub fn unstake(&mut self, scspr_amount: U256) {
         self.collect_fee(self.staked_cspr());
+        let block_time = self.env().get_block_time();
 
         let caller = self.env().caller();
 
@@ -208,7 +209,7 @@ impl StakedCSPR {
             unstake_id: new_unstake_id,
             owner: caller,
             cspr_amount,
-            claimable_from: self.next_claim_time(),
+            claimable_from: self.next_claim_time(block_time),
             claimed: false,
         });
 
@@ -221,7 +222,7 @@ impl StakedCSPR {
             cspr_amount,
             scspr_burned: scspr_amount,
             unstake_id: new_unstake_id,
-            claim_time: self.next_claim_time(),
+            claim_time: self.next_claim_time(block_time),
         });
 
         self.last_recorded_delegated_amount.set(self.staked_cspr());
@@ -467,10 +468,9 @@ impl StakedCSPR {
         });
     }
 
-    fn next_claim_time(&self) -> u64 {
-        let now = self.env().get_block_time();
+    fn next_claim_time(&self, block_time: u64) -> u64 {
         let claim_time = self.claim_time.get_or_default();
-        now + claim_time
+        block_time + claim_time
     }
 
     fn cspr_to_scspr(&self, cspr_stake: U512, staked_cspr: U512) -> U256 {
@@ -529,24 +529,17 @@ impl StakedCSPR {
         }
     }
 
-    fn get_random_validator_indices(&self, amount: usize) -> Vec<usize> {
-        let validators = self
-            .validators
-            .get()
-            .unwrap_or_revert_with(self, MisconfiguredValidator);
-        if validators.is_empty() {
-            self.env().revert(MisconfiguredValidator);
-        }
-
-        let validator_count = validators.len();
+    fn get_random_validator_indices(
+        &self,
+        amount: usize,
+        validators_count: usize,
+        seed: usize,
+    ) -> Vec<usize> {
         // Cap the amount at the number of validators
-        let amount_to_return = amount.min(validator_count);
+        let amount_to_return = amount.min(validators_count);
 
-        let mut all_indices: Vec<usize> = (0..validator_count).collect();
+        let mut all_indices: Vec<usize> = (0..validators_count).collect();
         let mut selected_indices = Vec::with_capacity(amount_to_return);
-
-        // Use the block time as a simple seed for randomness
-        let seed = self.env().get_block_time() as usize;
 
         // Select unique indices using a deterministic but pseudo-random approach
         for i in 0..amount_to_return {
@@ -567,7 +560,11 @@ impl StakedCSPR {
             .unwrap_or_revert_with(self, MisconfiguredValidator);
 
         // Just get a single random index
-        let indices = self.get_random_validator_indices(amount);
+        let indices = self.get_random_validator_indices(
+            amount,
+            validators.len(),
+            self.env().get_block_time() as usize,
+        );
         indices.iter().map(|i| validators[*i].clone()).collect()
     }
 
@@ -583,7 +580,11 @@ impl StakedCSPR {
         }
 
         // Start from a random index
-        let start_idx = self.get_random_validator_indices(1)[0];
+        let start_idx = self.get_random_validator_indices(
+            1,
+            validators.len(),
+            self.env().get_block_time() as usize,
+        )[0];
         let len = validators.len();
 
         // Try each validator starting from the random index, wrapping around
