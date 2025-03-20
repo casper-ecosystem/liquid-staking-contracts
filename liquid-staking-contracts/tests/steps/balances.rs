@@ -131,8 +131,10 @@ fn check_loose_tokens(world: &mut LSTWorld, cspr: CSPRAmount) {
     );
 }
 
-#[then(expr = "3 validators received total {cspr_amount} CSPR since last remove in equal amounts")]
-fn random_validators_check(world: &mut LSTWorld, cspr: CSPRAmount) {
+#[then(
+    expr = "{int} validators received total {cspr_amount} CSPR since last remove in equal amounts"
+)]
+fn random_validators_check(world: &mut LSTWorld, validators_count: u32, cspr: CSPRAmount) {
     let remove_state = world
         .pool_state
         .iter()
@@ -157,14 +159,15 @@ fn random_validators_check(world: &mut LSTWorld, cspr: CSPRAmount) {
     }
 
     assert_eq!(
-        upstaked_validators, 3,
-        "Expected exactly 3 validators to receive the stake amount"
+        upstaked_validators, validators_count,
+        "Expected exactly {} validators to receive the stake amount",
+        validators_count
     );
 
-    let expected = cspr.amount() / 3;
+    let expected = cspr.amount() / validators_count;
     assert_eq!(
         total,
-        expected * 3,
+        expected * validators_count,
         "Total stake across validators ({}) doesn't match expected amount ({})",
         total,
         expected

@@ -1,7 +1,9 @@
 use std::{collections::HashMap, ops::Deref, str::FromStr};
 
 use cucumber::{Parameter, World};
-use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRHostRef, StakedCSPRInitArgs, MIN_STAKE};
+use liquid_staking_contracts::token::{
+    StakedCSPR, StakedCSPRHostRef, StakedCSPRInitArgs, MIN_STAKE,
+};
 use odra::{
     casper_types::{PublicKey, U256, U512},
     host::Deployer,

@@ -5,3 +5,5 @@ Feature: CEP18 Features
         And symbol is "sCSPR"
         And decimals is 9
         And total supply is 0 sCSPR
+
+    Scenario: Trasferring tokens

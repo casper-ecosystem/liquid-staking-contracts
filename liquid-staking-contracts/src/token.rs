@@ -109,7 +109,6 @@ struct Unstake {
     claimed: bool,
 }
 
-
 /// StakedCSPR contract
 #[odra::module(
     events = [Staked, Unstaked, Claimed, Delegated, Undelegated],
@@ -167,7 +166,13 @@ impl StakedCSPR {
         }
     }
 
-    pub fn init(&mut self, validator_address: PublicKey, claim_time: u64, fee_percentage: U512, min_stake: U512) {
+    pub fn init(
+        &mut self,
+        validator_address: PublicKey,
+        claim_time: u64,
+        fee_percentage: U512,
+        min_stake: U512,
+    ) {
         let admin = self.env().caller();
 
         // Grant the admin role
@@ -417,11 +422,10 @@ impl StakedCSPR {
         if loose_tokens < min_stake {
             self.env().revert(InsufficientBalance);
         }
-    
-        let validators_count =
-        if loose_tokens < min_stake * 3 {
+
+        let validators_count = if loose_tokens < min_stake * 3 {
             (loose_tokens / min_stake).as_usize()
-        } else {    
+        } else {
             3
         };
 
@@ -488,7 +492,6 @@ impl StakedCSPR {
         now + claim_time
     }
 
-    // TODO: Cover with tests at U256 and U512 boundaries.
     fn cspr_to_scspr(&self, cspr_stake: U512) -> U256 {
         let staked_cspr = self.staked_cspr();
         if staked_cspr.is_zero() {
@@ -752,7 +755,7 @@ mod tests {
         let admin = env.get_account(0);
 
         // When Alice stakes 10 CSPR.
-        let deposit_amount_u512 = U512::from(10_000_000_000u64);
+        let deposit_amount_u512 = U512::from(1_000_000_000_000u64);
         env.set_caller(alice);
         token.with_tokens(deposit_amount_u512).stake();
 
@@ -764,13 +767,8 @@ mod tests {
         env.set_caller(bob);
         token.with_tokens(deposit_amount_u512).stake();
 
-        // TODO: FIX The math
-        // 1 Era generated 999 CSPR rewards for our validator
-        // 999 * 100 / 10000 = 9 CSPR fee
-        // (10_000_000_000 / 10_000_000_999) * 9 = 8 sCSPR
-
-        // Then Admin has 8 sCSPR
-        assert_eq!(token.balance_of(&admin), U256::from(8u64));
+        // Then Admin has 998 sCSPR
+        assert_eq!(token.balance_of(&admin), U256::from(998u64));
     }
 
     #[test]
@@ -808,8 +806,8 @@ mod tests {
         state_writer.write_state("initial", &token, total_delays);
 
         // When Alice stakes 10 CSPR
-        let deposit_amount_u512 = U512::from(10_000_000_000u64);
-        let deposit_amount_u256 = U256::from(10_000_000_000u64);
+        let deposit_amount_u512 = U512::from(1_000_000_000_000u64);
+        let deposit_amount_u256 = U256::from(1_000_000_000_000u64);
         env.set_caller(alice);
         token.with_tokens(deposit_amount_u512).stake();
 
@@ -839,12 +837,12 @@ mod tests {
         state_writer.write_state("after_alice_claim", &token, total_delays);
 
         // Verify final state
-        assert_eq!(token.balance_of(&admin), U256::from(98));
-        assert_eq!(token.staked_cspr(), U512::from(1098));
-        assert_eq!(token.total_supply(), U256::from(98));
+        assert_eq!(token.balance_of(&admin), U256::from(9998));
+        assert_eq!(token.staked_cspr(), U512::from(109998));
+        assert_eq!(token.total_supply(), U256::from(9998));
         assert_eq!(
             env.balance_of(&alice),
-            alice_initial_cspr_balance + U512::from(999) - U512::from(99)
+            alice_initial_cspr_balance + U512::from(99999) - U512::from(9999)
         );
     }
 
@@ -871,8 +869,8 @@ mod tests {
         let bob_initial_cspr_balance = env.balance_of(&bob);
 
         // When Alice stakes 10 CSPR.
-        let deposit_amount_u512 = U512::from(10_000_000_000u64);
-        let deposit_amount_u256 = U256::from(10_000_000_000u64);
+        let deposit_amount_u512 = U512::from(1_000_000_000_000u64);
+        let deposit_amount_u256 = U256::from(1_000_000_000_000u64);
         env.set_caller(alice);
         token.with_tokens(deposit_amount_u512).stake();
 

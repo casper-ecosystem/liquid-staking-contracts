@@ -1,50 +1,50 @@
 Feature: Administration fees
   Scenario: Simple fee collection
-    Given Alice has 100 CSPR
+    Given Alice has 1000 CSPR
     And Owner has 0 CSPR
-    When Alice stakes 100 CSPR
+    When Alice stakes 1000 CSPR
     And 2 auction passes
-    Then more than 100 CSPR is staked
+    Then more than 1000 CSPR is staked
     When Alice unstakes everything
     And unbonding period passes
     And Alice claims unstakes
-    Then Alice has more than 100 CSPR
+    Then Alice has more than 1000 CSPR
     And Owner has more than 0 sCSPR
 
   Scenario: Fee collection with exact numbers - small reward
-    Given Alice has 100 CSPR
+    Given Alice has 1000 CSPR
     And Owner has 0 CSPR
-    When Alice stakes 100 CSPR
+    When Alice stakes 1000 CSPR
     And 2 auction passes
-    Then 100.00001 CSPR is staked
+    Then 1000.00001 CSPR is staked
     And Owner has 0 sCSPR
     When Alice unstakes everything
     And unbonding period passes
     And Alice claims unstakes
-    Then Alice has 100.000009 CSPR
-    And Owner has 0.000000998 sCSPR
+    Then Alice has 1000.00009 CSPR
+    And Owner has 0.000009998 sCSPR
     When Owner unstakes everything
     And unbonding period passes
     And Owner claims unstakes
     Then Owner has 0.00001 CSPR
-    And 0.0000009 CSPR is staked
-    And 0.00000009 sCSPR is in the pool
+    And 0.000009 CSPR is staked
+    And 0.000000908 sCSPR is in the pool
 
   Scenario: Fee collection with exact numbers - BIG reward
-    Given Alice has 100 CSPR
+    Given Alice has 1000 CSPR
     And Owner has 0 CSPR
-    When Alice stakes 100 CSPR
+    When Alice stakes 1000 CSPR
     And 101 auction passes
-    Then 100.001 CSPR is staked
+    Then 1000.001 CSPR is staked
     And Owner has 0 sCSPR
     When Alice unstakes everything
     And unbonding period passes
     And Alice claims unstakes
-    Then Alice has 100.001 CSPR
-    And Owner has 0.000099989 sCSPR
+    Then Alice has 1000.001 CSPR
+    And Owner has 0.00099998 sCSPR
     When Owner unstakes everything
     And unbonding period passes
     And Owner claims unstakes
     Then Owner has 0.0001 CSPR
     And 0.00000099 CSPR is staked
-    And 0.000000908 sCSPR is in the pool
+    And 0.000009089 sCSPR is in the pool

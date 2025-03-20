@@ -1,5 +1,8 @@
 use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRInitArgs, MIN_STAKE};
-use odra::{casper_types::U512, host::{Deployer, HostEnv}};
+use odra::{
+    casper_types::U512,
+    host::{Deployer, HostEnv},
+};
 use odra_cli::OdraCli;
 
 pub struct DeployScript;
