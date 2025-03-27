@@ -1,6 +1,6 @@
 use crate::events::{
-    Claimed, CsprAddedToPool, CsprRemovedFromPool, Delegated, Staked, Undelegated, Unstaked,
-    ValidatorAdded, ValidatorRemoved,
+    Claimed, CsprAddedToPool, CsprRemovedFromPool, CsprWithdrawnFromContract, Delegated, Staked,
+    Undelegated, Unstaked, ValidatorAdded, ValidatorRemoved,
 };
 use crate::token::Error::*;
 use odra::{
@@ -58,7 +58,7 @@ struct Unstake {
 
 /// StakedCSPR contract
 #[odra::module(
-    events = [Staked, Unstaked, Claimed, Delegated, Undelegated, ValidatorRemoved, ValidatorAdded, CsprAddedToPool, CsprRemovedFromPool],
+    events = [Staked, Unstaked, Claimed, Delegated, Undelegated, ValidatorRemoved, ValidatorAdded, CsprAddedToPool, CsprRemovedFromPool, CsprWithdrawnFromContract],
     errors = Error
 )]
 pub struct StakedCSPR {
@@ -233,7 +233,10 @@ impl StakedCSPR {
     pub fn claim(&mut self) {
         let caller = self.env().caller();
         let mut unstake_ids = self.unstake_ids.get_or_default(&self.env().caller());
+        let mut indices_to_remove = Vec::new();
+        let mut transfers_to_make = Vec::new();
 
+        // First, process all unstakes and track which indices need to be removed
         for (index, unstake_id) in unstake_ids.clone().iter().enumerate() {
             let mut unstake = self
                 .unstakes
@@ -244,24 +247,41 @@ impl StakedCSPR {
             }
 
             let cspr_amount = unstake.cspr_amount;
-            self.env().transfer_tokens(&unstake.owner, &cspr_amount);
+            let owner = unstake.owner;
+
+            // First update all state
             unstake.claimed = true;
             self.unstakes.replace(*unstake_id, unstake);
-            unstake_ids.remove(index);
+            indices_to_remove.push(index);
             self.total_unstakes.set(
                 self.total_unstakes
                     .get_or_default()
                     .checked_sub(cspr_amount)
                     .unwrap_or_revert_with(self, AlreadyClaimed),
             );
-            self.env().emit_event(Claimed {
-                address: caller,
-                cspr_amount,
-                unstake_id: *unstake_id,
-            });
+
+            // Store transfer for later
+            transfers_to_make.push((owner, cspr_amount, *unstake_id));
         }
 
+        // Remove the indices in reverse order to avoid shifting problems
+        indices_to_remove.sort_unstable_by(|a, b| b.cmp(a));
+        for index in indices_to_remove {
+            unstake_ids.remove(index);
+        }
+
+        // Update storage
         self.unstake_ids.set(&caller, unstake_ids);
+
+        // Now perform all transfers after storage has been updated
+        for (recipient, amount, unstake_id) in transfers_to_make {
+            self.env().transfer_tokens(&recipient, &amount);
+            self.env().emit_event(Claimed {
+                address: caller,
+                cspr_amount: amount,
+                unstake_id,
+            });
+        }
     }
 
     /// Returns the total amount of CSPR that is staked
@@ -299,10 +319,14 @@ impl StakedCSPR {
         self.assert_min_stake(attached_value);
         let staked_cspr = self.staked_cspr();
         self.collect_fee(staked_cspr);
-        self.delegate(
-            self.get_random_validators(1)[0].clone(),
-            self.env().attached_value(),
-        );
+
+        // Get random validators and verify that we have at least one
+        let validators = self.get_random_validators(1);
+        if validators.is_empty() {
+            self.env().revert(MisconfiguredValidator);
+        }
+
+        self.delegate(validators[0].clone(), self.env().attached_value());
 
         // Emit event for adding CSPR to the pool
         self.env().emit_event(CsprAddedToPool {
@@ -336,13 +360,18 @@ impl StakedCSPR {
 
     /// Withdraws CSPR from the contract
     pub fn withdraw_from_the_contract(&mut self, amount: U512) {
-        self.ownable.assert_owner(&self.env().caller());
+        let caller = self.env().caller();
+        self.ownable.assert_owner(&caller);
 
-        if !self.env().self_balance() < amount {
+        if amount > self.env().self_balance() {
             self.env().revert(InsufficientBalance);
         }
 
         self.env().transfer_tokens(&self.env().caller(), &amount);
+        self.env().emit_event(CsprWithdrawnFromContract {
+            amount,
+            recipient: caller,
+        });
     }
 
     /// Used as a helper for testing
@@ -432,11 +461,16 @@ impl StakedCSPR {
 
     /// Returns the total amount of stake on the contract
     pub fn get_total_stake(&self) -> U512 {
-        let mut total = U512::zero();
-        for validator in self.get_validators() {
-            total += self.get_validator_stake(validator);
+        let validators = self.get_validators();
+
+        // Early return if there are no validators
+        if validators.is_empty() {
+            return U512::zero();
         }
-        total
+
+        validators.iter().fold(U512::zero(), |acc, validator| {
+            acc + self.get_validator_stake(validator.clone())
+        })
     }
 
     /// Returns the amount of loose tokens (CSPR on the contract which is not staked
@@ -474,25 +508,46 @@ impl StakedCSPR {
     }
 
     fn cspr_to_scspr(&self, cspr_stake: U512, staked_cspr: U512) -> U256 {
+        // If there's no existing stake, the conversion is 1:1
         if staked_cspr.is_zero() {
             return cspr_stake.to_u256().unwrap_or_revert(self);
         }
+
         let scspr_total_supply = self.token.total_supply().to_u512();
+
+        // If there's no existing supply, the conversion is also 1:1
+        if scspr_total_supply.is_zero() {
+            return cspr_stake.to_u256().unwrap_or_revert(self);
+        }
+
+        // Calculate sCSPR amount using the formula: cspr_stake * scspr_total_supply / staked_cspr
+        // To minimize rounding errors, we multiply first, then divide
         (cspr_stake * scspr_total_supply / staked_cspr)
             .to_u256()
             .unwrap_or_revert(self)
     }
 
     fn scspr_to_cspr(&self, scspr: U256) -> U512 {
+        // If there's no sCSPR being converted, return 0
         if scspr.is_zero() {
             return U512::zero();
         }
+
         let scspr_total_supply = self.token.total_supply().to_u512();
+
         if scspr_total_supply.is_zero() {
-            return U512::zero();
+            return scspr.to_u512();
         }
+
         let staked_cspr = self.staked_cspr();
 
+        // If there's no staked CSPR, conversion would be 1:1
+        if staked_cspr.is_zero() {
+            return scspr.to_u512();
+        }
+
+        // Calculate CSPR amount using the formula: scspr * staked_cspr / scspr_total_supply
+        // To minimize rounding errors, we multiply first, then divide
         (scspr).to_u512() * staked_cspr / scspr_total_supply
     }
 
@@ -535,6 +590,11 @@ impl StakedCSPR {
         validators_count: usize,
         seed: usize,
     ) -> Vec<usize> {
+        // Early return if validators_count is 0
+        if validators_count == 0 {
+            return Vec::new();
+        }
+
         // Cap the amount at the number of validators
         let amount_to_return = amount.min(validators_count);
 
@@ -544,7 +604,12 @@ impl StakedCSPR {
         // Select unique indices using a deterministic but pseudo-random approach
         for i in 0..amount_to_return {
             // Determine next position based on seed and current iteration
-            let pos = (seed + i * 17) % all_indices.len();
+            let pos = if all_indices.is_empty() {
+                break;
+            } else {
+                (seed + i * 17) % all_indices.len()
+            };
+
             // Take the index at that position
             let selected = all_indices.remove(pos);
             selected_indices.push(selected);
@@ -559,12 +624,17 @@ impl StakedCSPR {
             .get()
             .unwrap_or_revert_with(self, MisconfiguredValidator);
 
+        if validators.is_empty() {
+            self.env().revert(MisconfiguredValidator);
+        }
+
         // Just get a single random index
         let indices = self.get_random_validator_indices(
             amount,
             validators.len(),
             self.env().get_block_time() as usize,
         );
+
         indices.iter().map(|i| validators[*i].clone()).collect()
     }
 
@@ -636,6 +706,9 @@ mod tests {
             fn write_state(&mut self, _step: &str, _token: &StakedCSPRHostRef, _delays: u64) {}
         }
 
+        // Hidden behind a feature flag
+        // It will dump the state of the contract and the balances of the accounts
+        // into a csv file, for easier debugging and analysis
         #[cfg(feature = "csv-report")]
         pub struct CsvStateWriter {
             file: std::fs::File,

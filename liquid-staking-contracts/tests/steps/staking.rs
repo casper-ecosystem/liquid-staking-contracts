@@ -54,6 +54,13 @@ fn withdraw_from_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: C
     world.update_pool_state("withdraw_from_the_contract");
 }
 
+#[when(expr = "{account} tries to withdraw {cspr_amount} CSPR")]
+fn try_withdraw_from_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
+    world.env.set_caller(&account);
+    let _ = world.token.try_withdraw_from_the_contract(*cspr_amount);
+    world.update_pool_state("withdraw_from_the_contract");
+}
+
 #[when(expr = "{account} restakes loose tokens")]
 fn restake_loose_tokens(world: &mut LSTWorld, account: Account) {
     world.env.set_caller(&account);

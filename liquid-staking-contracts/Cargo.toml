@@ -50,3 +50,7 @@ harness = false
 [[test]]
 name = "test_restaking"
 harness = false
+
+[[test]]
+name = "test_bugs"
+harness = false

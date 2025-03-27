@@ -1,6 +1,7 @@
 use crate::lst_world::{LSTWorld, StakedCSPRAmount};
 use cucumber::{given, then};
 use odra::casper_types::U512;
+use odra::Addressable;
 use odra_bdd::types::account::Account;
 use odra_bdd::types::cspr::CSPRAmount;
 
@@ -30,6 +31,14 @@ fn check_more_than_cspr_balance(world: &mut LSTWorld, account: Account, cspr_amo
 #[then(expr = "{account} has more than {scspr} sCSPR")]
 fn check_more_than_scspr_balance(world: &mut LSTWorld, account: Account, scspr: StakedCSPRAmount) {
     assert!(world.token.balance_of(&world.env.get_address(&account)) > scspr.amount());
+}
+
+#[then(expr = "the contract has {cspr_amount} CSPR")]
+fn check_contract_cspr_balance(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
+    assert_eq!(
+        cspr_amount,
+        CSPRAmount::new(world.env.env().balance_of(world.token.address()), 9)
+    );
 }
 
 #[then(expr = "{scspr} sCSPR is in the pool")]

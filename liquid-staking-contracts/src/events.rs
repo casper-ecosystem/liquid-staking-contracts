@@ -89,3 +89,12 @@ pub struct CsprRemovedFromPool {
     /// The amount of CSPR that was removed from the pool
     pub amount: U512,
 }
+
+/// This event is emitted when CSPR is withdrawn from the contract.
+#[odra::event]
+pub struct CsprWithdrawnFromContract {
+    /// The amount of CSPR that was withdrawn.
+    pub amount: U512,
+    /// The recipient address.
+    pub recipient: Address,
+}
