@@ -7,6 +7,7 @@ edition = "2021"
 odra.workspace = true
 odra-cli.workspace = true
 liquid-staking-contracts = { path = "../liquid-staking-contracts" }
+hex = "0.4.3"
 
 [[bin]]
 name = "liquid-staking-cli"
