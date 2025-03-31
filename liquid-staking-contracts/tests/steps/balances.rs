@@ -133,9 +133,9 @@ fn check_loose_tokens(world: &mut LSTWorld, cspr: CSPRAmount) {
 
     // Also the balance of the token should be greater than the total loose tokens
     assert!(
-        world.token.self_balance() >= total_loose,
+        world.env.env().balance_of(world.token.address()) >= total_loose,
         "Token balance ({}) is less than the total loose tokens ({})",
-        world.token.self_balance(),
+        world.env.env().balance_of(world.token.address()),
         total_loose
     );
 }

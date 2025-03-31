@@ -1,6 +1,6 @@
 use crate::events::{
-    Claimed, CsprAddedToPool, CsprRemovedFromPool, CsprWithdrawnFromContract, Delegated, Staked,
-    Undelegated, Unstaked, ValidatorAdded, ValidatorRemoved,
+    Claimed, CsprAddedToPool, CsprRemovedFromPool, CsprWithdrawnFromContract, Delegated,
+    FeeCollected, Staked, Undelegated, Unstaked, ValidatorAdded, ValidatorRemoved,
 };
 use crate::token::Error::*;
 use odra::{
@@ -37,6 +37,8 @@ pub enum Error {
     StakeBelowMinimum = 61408,
     /// Total unstakes overflowed
     TotalUnstakesOverflow = 61409,
+    /// The validator is not in the list of validators
+    ValidatorNotInList = 61410,
 }
 
 /// Unstake struct
@@ -363,7 +365,8 @@ impl StakedCSPR {
         let caller = self.env().caller();
         self.ownable.assert_owner(&caller);
 
-        if amount > self.env().self_balance() {
+        // Only allow withdrawing loose tokens
+        if amount > self.get_loose_tokens() {
             self.env().revert(InsufficientBalance);
         }
 
@@ -372,12 +375,6 @@ impl StakedCSPR {
             amount,
             recipient: caller,
         });
-    }
-
-    /// Used as a helper for testing
-    /// TODO: Remove before production
-    pub fn self_balance(&self) -> U512 {
-        self.env().self_balance()
     }
 
     /// Adds a validator to the list of validators
@@ -403,6 +400,7 @@ impl StakedCSPR {
         self.ownable.assert_owner(&self.env().caller());
 
         let mut validators = self.validators.get_or_default();
+        let mut removed = false;
 
         // Find the position of the validator in the list
         if let Some(position) = validators.iter().position(|v| v == &public_key) {
@@ -420,14 +418,21 @@ impl StakedCSPR {
             if cspr_amount > U512::zero() {
                 self.undelegate(public_key, cspr_amount);
             }
+
+            removed = true;
         }
-        // If validator doesn't exist, do nothing
+
+        // If validator doesn't exist, throw
+        if !removed {
+            self.env().revert(ValidatorNotInList);
+        }
     }
 
     /// Restakes loose tokens
     /// Checks the amount of loose tokens (CSPR on the contract which is not staked
     /// or claimable) and delegates it to 3 random validators, equally divided
     pub fn restake_loose_tokens(&mut self) {
+        self.ownable.assert_owner(&self.env().caller());
         let min_stake = self.min_stake.get_or_default();
         let loose_tokens = self.get_loose_tokens();
 
@@ -522,6 +527,7 @@ impl StakedCSPR {
 
         // Calculate sCSPR amount using the formula: cspr_stake * scspr_total_supply / staked_cspr
         // To minimize rounding errors, we multiply first, then divide
+        // If there are some value leakage, it can be restaked using the restake_loose_tokens function
         (cspr_stake * scspr_total_supply / staked_cspr)
             .to_u256()
             .unwrap_or_revert(self)
@@ -548,6 +554,7 @@ impl StakedCSPR {
 
         // Calculate CSPR amount using the formula: scspr * staked_cspr / scspr_total_supply
         // To minimize rounding errors, we multiply first, then divide
+        // If there are some value leakage, it can be restaked using the restake_loose_tokens function
         (scspr).to_u512() * staked_cspr / scspr_total_supply
     }
 
@@ -579,6 +586,12 @@ impl StakedCSPR {
             // Mint sCSPR to admin (using the deployer/admin stored in DEFAULT_ADMIN_ROLE)
             let admin = self.ownable.get_owner();
             self.token.raw_mint(&admin, &fee_scspr);
+
+            self.env().emit_event(FeeCollected {
+                amount: fee_scspr,
+                recipient: admin,
+            });
+
             // Update the last recorded delegation.
             self.last_recorded_delegated_amount.set(current_delegated);
         }
@@ -596,13 +609,13 @@ impl StakedCSPR {
         }
 
         // Cap the amount at the number of validators
-        let amount_to_return = amount.min(validators_count);
+        let validators_cap = amount.min(validators_count);
 
         let mut all_indices: Vec<usize> = (0..validators_count).collect();
-        let mut selected_indices = Vec::with_capacity(amount_to_return);
+        let mut selected_indices = Vec::with_capacity(validators_cap);
 
         // Select unique indices using a deterministic but pseudo-random approach
-        for i in 0..amount_to_return {
+        for i in 0..validators_cap {
             // Determine next position based on seed and current iteration
             let pos = if all_indices.is_empty() {
                 break;
@@ -629,6 +642,8 @@ impl StakedCSPR {
         }
 
         // Just get a single random index
+        // It uses the block time as a seed, so it's deterministic
+        // But it is sufficient for our purposes
         let indices = self.get_random_validator_indices(
             amount,
             validators.len(),

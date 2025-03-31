@@ -29,7 +29,7 @@ Feature: Multiple Validators
     And contract has 2 validators
 
   Scenario: Removing a validator that is not in the list
-    When Owner removes Validator3
+    When Owner tries to remove Validator3
     Then contract has 1 validator
 
   Scenario: Only an admin can remove a validator

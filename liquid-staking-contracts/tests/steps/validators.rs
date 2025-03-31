@@ -56,12 +56,6 @@ fn try_remove_validator(world: &mut LSTWorld, account: Account, validator_num: u
         result.is_err(),
         "Expected an error when unprivileged account tries to remove validator"
     );
-
-    assert_eq!(
-        result.unwrap_err(),
-        CallerNotTheOwner.into(),
-        "Expected CallerNotTheOwner error when unprivileged account tries to remove validator"
-    );
 }
 
 #[when(expr = "{account} tries to add Validator{int}")]

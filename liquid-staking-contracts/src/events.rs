@@ -98,3 +98,12 @@ pub struct CsprWithdrawnFromContract {
     /// The recipient address.
     pub recipient: Address,
 }
+
+/// Event emitted when an admin collects the fee
+#[odra::event]
+pub struct FeeCollected {
+    /// The amount of sCSPR that was collected
+    pub amount: U256,
+    /// The recipient address.
+    pub recipient: Address,
+}

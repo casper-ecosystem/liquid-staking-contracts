@@ -1,5 +1,8 @@
 use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRInitArgs, MIN_STAKE};
-use odra::{casper_types::{bytesrepr::FromBytes, PublicKey, U512}, host::{Deployer, HostEnv}};
+use odra::{
+    casper_types::{bytesrepr::FromBytes, PublicKey, U512},
+    host::{Deployer, HostEnv},
+};
 use odra_cli::OdraCli;
 
 pub fn validator() -> PublicKey {
