@@ -15,6 +15,7 @@ use odra_modules::{
 };
 
 pub const MIN_STAKE: u128 = 500_000_000_000;
+pub const BENEFICIAL_VALIDATORS_COUNT: usize = 3;
 
 /// Error enum for the StakedCSPR contract
 #[odra::odra_error]
@@ -39,13 +40,15 @@ pub enum Error {
     TotalUnstakesOverflow = 61409,
     /// The validator is not in the list of validators
     ValidatorNotInList = 61410,
+    /// Arithmetics error
+    ArithmeticsError = 61411,
 }
 
-/// Unstake struct
-/// It is used to store the unstake information for each user
-/// as the unstake needs to wait for the unbonding delay before it can be claimed
+/// UnstakingInfo struct
+/// It is used to store the unstaking information for each user
+/// as the unstaking needs to wait for the unbonding delay before it can be claimed
 #[odra::odra_type]
-struct Unstake {
+struct UnstakingInfo {
     /// The id of the unstake
     unstake_id: u32,
     /// The address of the owner of the unstake
@@ -60,7 +63,7 @@ struct Unstake {
 
 /// StakedCSPR contract
 #[odra::module(
-    events = [Staked, Unstaked, Claimed, Delegated, Undelegated, ValidatorRemoved, ValidatorAdded, CsprAddedToPool, CsprRemovedFromPool, CsprWithdrawnFromContract],
+    events = [Staked, Unstaked, Claimed, Delegated, Undelegated, ValidatorRemoved, ValidatorAdded, CsprAddedToPool, CsprRemovedFromPool, CsprWithdrawnFromContract, FeeCollected],
     errors = Error
 )]
 pub struct StakedCSPR {
@@ -71,7 +74,7 @@ pub struct StakedCSPR {
     /// Unstake ids for each user
     unstake_ids: Mapping<Address, Vec<u32>>,
     /// List of unstakes
-    unstakes: List<Unstake>,
+    unstakes: List<UnstakingInfo>,
     /// Total unstakes
     total_unstakes: Var<U512>,
     /// List of validators
@@ -207,7 +210,7 @@ impl StakedCSPR {
         let new_unstake_id = self.unstakes.len();
         account_unstake_ids.push(new_unstake_id);
 
-        self.unstakes.push(Unstake {
+        self.unstakes.push(UnstakingInfo {
             unstake_id: new_unstake_id,
             owner: caller,
             cspr_amount,
@@ -440,10 +443,10 @@ impl StakedCSPR {
             self.env().revert(InsufficientBalance);
         }
 
-        let validators_count = if loose_tokens < min_stake * 3 {
+        let validators_count = if loose_tokens < min_stake * BENEFICIAL_VALIDATORS_COUNT {
             (loose_tokens / min_stake).as_usize()
         } else {
-            3
+            BENEFICIAL_VALIDATORS_COUNT
         };
 
         let validators = self.get_random_validators(validators_count);
@@ -632,10 +635,7 @@ impl StakedCSPR {
     }
 
     fn get_random_validators(&self, amount: usize) -> Vec<PublicKey> {
-        let validators = self
-            .validators
-            .get()
-            .unwrap_or_revert_with(self, MisconfiguredValidator);
+        let validators = self.validators.get_or_revert_with(MisconfiguredValidator);
 
         if validators.is_empty() {
             self.env().revert(MisconfiguredValidator);
@@ -658,8 +658,7 @@ impl StakedCSPR {
         let mut remaining_amount = total_amount;
         let validators = self
             .validators
-            .get()
-            .unwrap_or_revert_with(self, MisconfiguredValidator);
+            .get_or_revert_with(MisconfiguredValidator);
         if validators.is_empty() {
             self.env().revert(MisconfiguredValidator);
         }
@@ -686,7 +685,9 @@ impl StakedCSPR {
                 };
 
                 self.undelegate(validator, amount_to_undelegate);
-                remaining_amount -= amount_to_undelegate;
+                remaining_amount = remaining_amount
+                    .checked_sub(amount_to_undelegate)
+                    .unwrap_or_revert_with(self, ArithmeticsError);
 
                 if remaining_amount.is_zero() {
                     break;
