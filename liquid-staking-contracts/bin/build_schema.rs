@@ -2,12 +2,14 @@
 #[allow(unused_imports)]
 use liquid_staking_contracts;
 
+#[cfg(not(test))]
 #[cfg(not(target_arch = "wasm32"))]
 extern "Rust" {
     fn module_schema() -> odra::contract_def::ContractBlueprint;
     fn casper_contract_schema() -> odra::schema::casper_contract_schema::ContractSchema;
 }
 
+#[cfg(not(test))]
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
     odra_build::schema(unsafe { crate::module_schema() }, unsafe {

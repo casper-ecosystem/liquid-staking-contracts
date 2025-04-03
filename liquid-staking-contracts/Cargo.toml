@@ -4,17 +4,22 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-odra = {git = "https://github.com/odradev/odra", features = [], default-features = false }
-odra-modules = {git = "https://github.com/odradev/odra", features = [], default-features = false }
+odra.workspace = true
+odra-modules.workspace = true
 
 [dev-dependencies]
-odra-test = {git = "https://github.com/odradev/odra", features = [], default-features = false }
+odra-test.workspace = true
+odra-bdd.workspace = true
+cucumber.workspace = true
 
 [build-dependencies]
-odra-build = {git = "https://github.com/odradev/odra", features = [], default-features = false }
+odra-build.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-odra-build = {git = "https://github.com/odradev/odra", features = [], default-features = false }
+odra-build.workspace = true
+
+[features]
+csv-report = []
 
 [[bin]]
 name = "liquid_staking_contracts_build_contract"
@@ -25,3 +30,27 @@ test = false
 name = "liquid-staking-contracts_build_schema"
 path = "bin/build_schema.rs"
 test = false
+
+[[test]]
+name = "test_staking"
+harness = false
+
+[[test]]
+name = "test_pool"
+harness = false
+
+[[test]]
+name = "test_fee"
+harness = false
+
+[[test]]
+name = "test_validators"
+harness = false
+
+[[test]]
+name = "test_restaking"
+harness = false
+
+[[test]]
+name = "test_bugs"
+harness = false
