@@ -42,6 +42,8 @@ pub enum Error {
     ValidatorNotInList = 61410,
     /// Arithmetics error
     ArithmeticsError = 61411,
+    /// Action not allowed
+    ActionNotAllowed = 61412,
 }
 
 /// UnstakingInfo struct
@@ -105,14 +107,6 @@ impl StakedCSPR {
             fn approve(&mut self, spender: &Address, amount: &U256);
             fn decrease_allowance(&mut self, spender: &Address, decr_by: &U256);
             fn increase_allowance(&mut self, spender: &Address, inc_by: &U256);
-            fn change_security(
-                &mut self,
-                admin_list: Vec<Address>,
-                minter_list: Vec<Address>,
-                none_list: Vec<Address>
-            );
-            fn mint(&mut self, owner: &Address, amount: &U256);
-            fn burn(&mut self, owner: &Address, amount: &U256);
         }
 
         to self.ownable {
@@ -150,6 +144,32 @@ impl StakedCSPR {
         self.fee_percentage.set(fee_percentage);
         self.last_recorded_delegated_amount.set(U512::zero());
         self.min_stake.set(min_stake);
+    }
+
+    /// We override the default implementation of the change_security function
+    /// to be compatible with the cep18 token, but we don't allow any changes
+    #[allow(unused_variables)]
+    pub fn change_security(
+        &mut self,
+        admin_list: Vec<Address>,
+        minter_list: Vec<Address>,
+        none_list: Vec<Address>,
+    ) {
+        self.revert(ActionNotAllowed);
+    }
+
+    /// We override the default implementation of the mint function
+    /// to be compatible with the cep18 token, but we don't allow any minting
+    #[allow(unused_variables)]
+    pub fn mint(&mut self, owner: &Address, amount: &U256) {
+        self.revert(ActionNotAllowed);
+    }
+
+    /// We override the default implementation of the burn function
+    /// to be compatible with the cep18 token, but we don't allow any burning
+    #[allow(unused_variables)]
+    pub fn burn(&mut self, owner: &Address, amount: &U256) {
+        self.revert(ActionNotAllowed);
     }
 
     /// Stakes CSPR
@@ -579,7 +599,7 @@ impl StakedCSPR {
             let fee = reward * fee_percent / U512::from(10000u64);
             // Calculate fee_scspr based on total staked amount of cspr and total liquidity of scspr
             let total_scspr_liquidity = self.token.total_supply().to_u512();
-            let fee_scspr = if current_delegated.is_zero() || total_scspr_liquidity.is_zero() {
+            let fee_scspr = if total_scspr_liquidity.is_zero() {
                 U256::zero()
             } else {
                 (fee * total_scspr_liquidity / current_delegated)
@@ -656,9 +676,7 @@ impl StakedCSPR {
     // Update undelegate_from_validators to use simpler random selection
     fn undelegate_from_validators(&mut self, total_amount: U512) -> U512 {
         let mut remaining_amount = total_amount;
-        let validators = self
-            .validators
-            .get_or_revert_with(MisconfiguredValidator);
+        let validators = self.validators.get_or_revert_with(MisconfiguredValidator);
         if validators.is_empty() {
             self.env().revert(MisconfiguredValidator);
         }

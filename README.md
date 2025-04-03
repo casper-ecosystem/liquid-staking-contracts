@@ -5,12 +5,23 @@ It contains two projects:
   [StakedCSPR](liquid-staking-contracts/src/token.rs) contract is implemented.
 - `liquid-staking-cli` - this is where the CLI tool is implemented.
 
-## Testing
+## Prerequisites
+
+- [Rust](https://www.rust-lang.org/tools/install)
+- [cargo-odra](https://github.com/odra-dev/cargo-odra) - with all its prerequisites
+- [just](https://github.com/casey/just)
+
+## Liquid staking contracts
+
+This folder contains the implementation of the liquid staking contract. Detailed description of the contract can be found in the [README.md](liquid-staking-contracts/README.md) file. Tests are implemented in Gherkin format and can be found in the [features](liquid-staking-contracts/tests/features) folder.
+
+### Testing
 To run the tests suite, you can use the following command:
 
 ```bash
 $ just test
 ```
+
 
 ## Liquid Staking CLI
 
@@ -30,6 +41,30 @@ Commands:
 Options:
   -h, --help  Print help
 ```
+
+This tool is used to interact with the contract on the Casper network. To deploy the contract, make sure it is built:
+
+```bash
+$ just build-contracts
+```
+
+Configure your keys in .env file. You can reuse defaults from .env.sample.
+
+
+Then you can deploy the contract:
+
+```bash
+$ just cli deploy
+```
+
+The repository holds a [deployed_contracts.toml](resources/deployed_contracts.toml) file that contains the information about the latest contract deployed on the testnet, so you can skip the deployment step and use it directly.
+
+To see all the entrypoints of the contract, you can use the following command:
+
+```bash
+$ just cli contract StakedCSPR help
+```
+Below are some examples of how to use the contract.
 
 ### Stake
 
