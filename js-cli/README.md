@@ -1,14 +1,5 @@
 # StakedCSPR JavaScript client
 
-NOTES:
-1. This is a work in progress client.
-2. `stake` and `unstake` entry points in the contract are 'dummy'. No real delegation/undelegation hapens under the hood.
-3. Casper JS SDK v5.0.1-beta2 is required.
-4. Casper 2.0 network is required for testing.
-5. WASM links for testing:
- - https://drive.google.com/file/d/1hZk7tjB4uK-35CSiXxCJXNDeJexVp0BI/view?usp=sharing
- - https://drive.google.com/file/d/1prsJjEUmyNDHozeBvMAsjLmf-LMnVitM/view?usp=sharing
- 
 ### Install the contract
 
 ```
@@ -22,19 +13,43 @@ npm run scripts:install_staking -- \
 
 ```
 npm run scripts:stake -- \
-  --node_url http://52.90.123.125:7777/rpc \
-  --network_name dev-net \
-  --owner_keys_path ./nctl-docker/users/user-1/secret_key.pem \
-  --proxy_caller ../wasm/proxy_caller_dummy.wasm \
-  --contract_package_hash 3c3034152dc5183aca4faead260fe71e6805b3c2b45004d3dc19d7dc4f391519 \
-  --amount 1000000000
+  --node_url https://node.testnet.casper.network/rpc \
+  --network_name casper-test \
+  --owner_keys_path ./account3_cw.pem \
+  --keys_algo secp256k1 \
+  --proxy_caller ../wasm/proxy_caller.wasm \
+  --contract_package_hash 8ef35d2b2d3f6c3dbdcab9b1d05f0a941b93bedb978272b5c4a11d23e4e8ffd3 \
+  --amount 500000000000
 ```
 
 ### Unstake CSPR
 
 ```
 npm run scripts:unstake -- \
-  --owner_keys_path ./nctl-docker/users/user-1/secret_key.pem \
-  --contract_package_hash 3c3034152dc5183aca4faead260fe71e6805b3c2b45004d3dc19d7dc4f391519 \
-  --amount 1000000000
+  --node_url https://node.testnet.casper.network/rpc \
+  --network_name casper-test \
+  --owner_keys_path ./account3_cw.pem \
+  --keys_algo secp256k1 \
+  --contract_package_hash 8ef35d2b2d3f6c3dbdcab9b1d05f0a941b93bedb978272b5c4a11d23e4e8ffd3 \
+  --amount 3000000000
+```
+
+### Claim
+
+```
+npm run scripts:claim -- \
+--node_url https://node.testnet.casper.network/rpc \
+--network_name casper-test \
+--owner_keys_path ./account3_cw.pem \
+--keys_algo secp256k1 \
+--contract_package_hash 8ef35d2b2d3f6c3dbdcab9b1d05f0a941b93bedb978272b5c4a11d23e4e8ffd3
+```
+
+### Get Transaction Events
+
+```
+npm run scripts:get_transaction_events -- \
+--node_url https://node.testnet.casper.network/rpc \
+--contract_hash 3e945c35a602d049a3ec5960dd729ed7fb338c9c3b0d2e375313825b749d0042 \
+--transaction_hash 0c75981065996aa697236b7fc018bfed41a3e20213f6b7848511082718ae56bc
 ```

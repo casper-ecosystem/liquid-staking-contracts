@@ -4,14 +4,8 @@ import {
     KeyAlgorithm,
     PrivateKey,
     RpcClient,
-    CLValueUInt256,
     ContractCallBuilder,
-    ExecutableDeployItem,
-    DeployHeader,
-    Deploy,
-    ModuleBytes,
-    StoredVersionedContractByHash,
-    ContractHash
+    CLValue
 } from "casper-js-sdk";
 import * as fs from 'fs/promises';
 import {BigNumber} from "@ethersproject/bignumber";
@@ -25,34 +19,32 @@ program
     .option('--network_name [value]', 'network_name', 'casper-net-1')
     .option('--contract_package_hash [value]', 'staking contract package address')
     .option('--amount [value]', 'amount to unstake')
+    .option('--paymentAmount [value]', 'motes to cover gas costs', '12000000000')
 
 program.parse();
 
 const options = program.opts();
 
-export const getSenderKey = async (filePath: string) => {
+export const getSenderKey = async (filePath: string, algo: string) => {
     const pem = await fs.readFile(filePath);
-    return PrivateKey.fromPem(pem.toString(),
-        KeyAlgorithm.ED25519
-    );
+    const keyAlgo = algo == 'ed25519' ? KeyAlgorithm.ED25519 : KeyAlgorithm.SECP256K1;
+    return PrivateKey.fromPem(pem.toString(), keyAlgo);
 }
 
 const unstake = async () => {
 
-    const paymentAmount = 99_000_000_000;
-    const sender = await getSenderKey(options.owner_keys_path);
+    const sender = await getSenderKey(options.owner_keys_path, options.keys_algo);
 
     const args = Args.fromMap({
-        scspr_amount: CLValueUInt256.newCLUInt256(options.amount),
+        scspr_amount: CLValue.newCLUInt256(options.amount),
     });
 
     const transaction = new ContractCallBuilder()
         .from(sender.publicKey)
-        .byPackageName("StakedCSPR_package_hash")
         .byPackageHash(options.contract_package_hash)
         .entryPoint('unstake')
         .runtimeArgs(args)
-        .payment(paymentAmount) // Amount in motes
+        .payment(Number.parseInt(options.paymentAmount, 10)) // Amount in motes
         .chainName(options.network_name)
         .build();
 
@@ -60,35 +52,8 @@ const unstake = async () => {
     const rpcHandler = new HttpHandler(options.node_url);
     const rpcClient = new RpcClient(rpcHandler);
     const result = await rpcClient.putTransaction(transaction);
-    console.log("Transaction hash: ", result.transactionHash);
-};
-
-const unstake_deploy = async () => {
-
-    const sender = await getSenderKey(options.owner_keys_path);
-
-    const args = Args.fromMap({
-        scspr_amount: CLValueUInt256.newCLUInt256(options.amount),
-    });
-
-    const session = new ExecutableDeployItem();
-    const contractHash = ContractHash.fromJSON(options.contract_package_hash)
-    session.storedVersionedContractByHash = new StoredVersionedContractByHash(contractHash, 'unstake', args);
-
-    const payment = ExecutableDeployItem.standardPayment("25000000000");
-
-    const deployHeader = DeployHeader.default();
-    deployHeader.account = sender.publicKey;
-    deployHeader.chainName = options.network_name;
-    const deploy = Deploy.makeDeploy(deployHeader, payment, session);
-    deploy.sign(sender);
-
-    const rpcHandler = new HttpHandler(options.node_url);
-    const rpcClient = new RpcClient(rpcHandler);
-    const result = await rpcClient.putDeploy(deploy);
-
-    console.log(`Deploy Hash: ${result.deployHash.toHex()}`);
+    console.log("Transaction hash: ", result.transactionHash.toHex());
 };
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
-unstake_deploy();
+unstake();

@@ -1,14 +1,12 @@
 import {
     Args,
     CLValue,
-    CLValueUInt64,
     HttpHandler,
     KeyAlgorithm,
     PrivateKey,
     PublicKey,
     RpcClient,
-    CLValueBool,
-    CLValueString, SessionBuilder
+    SessionBuilder
 } from "casper-js-sdk";
 import * as fs from 'fs/promises';
 
@@ -40,11 +38,11 @@ const install = async () => {
     const contractWasm = await fs.readFile(options.wasm);
 
     const args = Args.fromMap({
-            odra_cfg_is_upgradable: CLValueBool.newCLValueBool(false),
-            odra_cfg_allow_key_override: CLValueBool.newCLValueBool(true),
-            odra_cfg_package_hash_key_name: CLValueString.newCLString("StakedCSPR_package_hash"),
+            odra_cfg_is_upgradable: CLValue.newCLValueBool(false),
+            odra_cfg_allow_key_override: CLValue.newCLValueBool(true),
+            odra_cfg_package_hash_key_name: CLValue.newCLString("StakedCSPR_package_hash"),
             validator_address: CLValue.newCLPublicKey(PublicKey.fromHex(options.validator)),
-            claim_time: CLValueUInt64.newCLUint64(7*60*60),
+            claim_time: CLValue.newCLUint64(7*60*60),
         });
 
     const sessionTransaction = new SessionBuilder()
@@ -60,7 +58,7 @@ const install = async () => {
     const rpcHandler = new HttpHandler(options.node_url);
     const rpcClient = new RpcClient(rpcHandler);
     const result = await rpcClient.putTransaction(sessionTransaction);
-    console.log("Transaction hash: ", result.transactionHash);
+    console.log("Transaction hash: ", result.transactionHash.toHex());
 };
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises

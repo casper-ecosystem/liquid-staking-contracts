@@ -5,16 +5,11 @@ import {
     PrivateKey,
     RpcClient,
     SessionBuilder,
-    CLValueString,
-    CLValueUInt512,
-    CLValueByteArray,
     Hash,
-    CLValueList,
     CLTypeUInt8,
-    CLValueUInt8, ExecutableDeployItem, ModuleBytes, DeployHeader, Deploy
+    CLValue
 } from "casper-js-sdk";
 import * as fs from 'fs/promises';
-
 const {program} = require('commander');
 
 program
@@ -25,7 +20,8 @@ program
     .option('--network_name [value]', 'network_name', 'casper-net-1')
     .option('--proxy_caller [value]', 'proxy caller wasm file')
     .option('--contract_package_hash [value]', 'staking contract address')
-    .option('--amount [value]', 'amount to unstake')
+    .option('--amount [value]', 'amount to unstake (in motes)')
+    .option('--paymentAmount [value]', 'motes to cover gas costs', '12000000000')
 
 program.parse();
 
@@ -33,29 +29,25 @@ const options = program.opts();
 
 export const getSenderKey = async (filePath: string, algo: string) => {
     const pem = await fs.readFile(filePath);
-    return PrivateKey.fromPem(pem.toString(),
-        KeyAlgorithm.ED25519
-    );
+    const keyAlgo = algo == 'ed25519' ? KeyAlgorithm.ED25519 : KeyAlgorithm.SECP256K1;
+    return PrivateKey.fromPem(pem.toString(), keyAlgo);
 }
 
 const stake = async () => {
-
-    const paymentAmount = 25_000_000_000;
     const owner = await getSenderKey(options.owner_keys_path, options.keys_algo);
     const contractWasm = await fs.readFile(options.proxy_caller);
 
     const args_bytes: Uint8Array = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
-    const serialized_args = CLValueList.newCLList(CLTypeUInt8,
+    const serialized_args = CLValue.newCLList(CLTypeUInt8,
         Array.from(args_bytes)
-            .map(value => CLValueUInt8.newCLUint8(value))
+            .map(value => CLValue.newCLUint8(value))
     );
 
-
     const args = Args.fromMap({
-        amount: CLValueUInt512.newCLUInt512(options.amount),
-        attached_value: CLValueUInt512.newCLUInt512(options.amount),
-        entry_point: CLValueString.newCLString("stake"),
-        package_hash: CLValueByteArray.newCLByteArray(Hash.fromHex(options.contract_package_hash).toBytes()),
+        amount: CLValue.newCLUInt512(options.amount),
+        attached_value: CLValue.newCLUInt512(options.amount),
+        entry_point: CLValue.newCLString("stake"),
+        package_hash: CLValue.newCLByteArray(Hash.fromHex(options.contract_package_hash).toBytes()),
         args: serialized_args,
     });
 
@@ -63,7 +55,7 @@ const stake = async () => {
         .from(owner.publicKey)
         .runtimeArgs(args)
         .wasm(new Uint8Array(contractWasm))
-        .payment(paymentAmount) // Amount in motes
+        .payment(Number.parseInt(options.paymentAmount, 10)) // Amount in motes
         .chainName(options.network_name)
         .build();
 
@@ -72,45 +64,8 @@ const stake = async () => {
     const rpcHandler = new HttpHandler(options.node_url);
     const rpcClient = new RpcClient(rpcHandler);
     const result = await rpcClient.putTransaction(sessionTransaction);
-    console.log("Transaction hash: ", result.transactionHash);
-};
-
-const stake_deploy = async () => {
-
-    const owner = await getSenderKey(options.owner_keys_path, options.keys_algo);
-    const contractWasm = await fs.readFile(options.proxy_caller);
-
-    const args_bytes: Uint8Array = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
-    const serialized_args = CLValueList.newCLList(CLTypeUInt8,
-        Array.from(args_bytes)
-            .map(value => CLValueUInt8.newCLUint8(value))
-    );
-
-    const args = Args.fromMap({
-        amount: CLValueUInt512.newCLUInt512(options.amount),
-        attached_value: CLValueUInt512.newCLUInt512(options.amount),
-        entry_point: CLValueString.newCLString("stake"),
-        package_hash: CLValueByteArray.newCLByteArray(Hash.fromHex(options.contract_package_hash).toBytes()),
-        args: serialized_args,
-    });
-
-    const session = new ExecutableDeployItem();
-    session.moduleBytes = new ModuleBytes(new Uint8Array(contractWasm), args);
-
-    const payment = ExecutableDeployItem.standardPayment("25000000000");
-
-    const deployHeader = DeployHeader.default();
-    deployHeader.account = owner.publicKey;
-    deployHeader.chainName = options.network_name;
-    const deploy = Deploy.makeDeploy(deployHeader, payment, session);
-    deploy.sign(owner);
-
-    const rpcHandler = new HttpHandler(options.node_url);
-    const rpcClient = new RpcClient(rpcHandler);
-    const result = await rpcClient.putDeploy(deploy);
-
-    console.log(`Deploy Hash: ${result.deployHash.toHex()}`);
+    console.log("Transaction hash: ", result.transactionHash.toHex());
 };
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
-stake_deploy();
+stake();

@@ -7,7 +7,8 @@
     "scripts:install_staking": "ts-node install_staking.ts",
     "scripts:stake": "ts-node stake.ts",
     "scripts:unstake": "ts-node unstake.ts",
-    "scripts:claim": "ts-node claim.ts"
+    "scripts:claim": "ts-node claim.ts",
+    "scripts:get_transaction_events": "ts-node get_transaction_events.ts"
   },
   "keywords": [],
   "author": "David Hernando <david.hernando@makes.services>",
@@ -24,7 +25,8 @@
   },
   "dependencies": {
     "@ethersproject/bignumber": "^5.7.0",
-    "casper-js-sdk": "5.0.1-beta2",
+    "casper-js-sdk": "5.0.1",
+    "@make-software/ces-js-parser": "2.0.0",
     "commander": "^10.0.0",
     "ts-results": "^3.3.0"
   }
