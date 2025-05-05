@@ -1,4 +1,4 @@
-Feature: Fix for HAL-001 bug
+Feature: Fix for HAL-001
 
   Scenario: Validator removal bypasses fee collection and breaks delegation tracking
     Given Alice has 1000 CSPR

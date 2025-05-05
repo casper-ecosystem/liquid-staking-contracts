@@ -16,7 +16,7 @@ use odra_modules::{
 
 pub const MIN_STAKE: u128 = 500_000_000_000;
 pub const BENEFICIAL_VALIDATORS_COUNT: usize = 3;
-
+pub const MAX_FEE_PERCENTAGE: u32 = 10000;
 /// Error enum for the StakedCSPR contract
 #[odra::odra_error]
 pub enum Error {
@@ -44,6 +44,8 @@ pub enum Error {
     ArithmeticsError = 61411,
     /// Action not allowed
     ActionNotAllowed = 61412,
+    /// Fee percentage is above the maximum
+    InvalidFeePercentage = 61413,
 }
 
 /// UnstakingInfo struct
@@ -124,6 +126,11 @@ impl StakedCSPR {
         fee_percentage: U512,
         min_stake: U512,
     ) {
+        // Check if the fee percentage is above the maximum
+        if fee_percentage > MAX_FEE_PERCENTAGE.into() {
+            self.revert(InvalidFeePercentage);
+        }
+
         let admin = self.env().caller();
 
         // Grant the admin role

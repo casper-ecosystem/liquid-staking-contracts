@@ -1,4 +1,4 @@
-Feature: Fix for HAL-002 bug
+Feature: Fix for HAL-002
 
   Scenario: Contract lacks mechanism to transfer ownership after deployment
     Given Owner is the contract owner
