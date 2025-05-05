@@ -113,6 +113,7 @@ impl StakedCSPR {
 
         to self.ownable {
             fn get_owner(&self) -> Address;
+            fn transfer_ownership(&mut self, new_owner: &Address);
         }
     }
 
