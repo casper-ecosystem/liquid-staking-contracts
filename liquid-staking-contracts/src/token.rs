@@ -46,6 +46,8 @@ pub enum Error {
     ActionNotAllowed = 61412,
     /// Fee percentage is above the maximum
     InvalidFeePercentage = 61413,
+    /// The validator exists in the list of validators
+    ValidatorAlreadyExists = 61414,
 }
 
 /// UnstakingInfo struct
@@ -348,6 +350,7 @@ impl StakedCSPR {
 
     /// Adds CSPR to the pool
     /// This function is payable, the attached value is the amount of CSPR to add to the pool
+    /// No sCSPR is minted, only CSPR is added to the pool, which affect the price of sCSPR
     #[odra(payable)]
     pub fn add_to_the_pool(&mut self) {
         let attached_value = self.env().attached_value();
@@ -425,6 +428,8 @@ impl StakedCSPR {
             self.env().emit_event(ValidatorAdded {
                 validator: public_key,
             });
+        } else {
+            self.env().revert(ValidatorAlreadyExists);
         }
     }
 

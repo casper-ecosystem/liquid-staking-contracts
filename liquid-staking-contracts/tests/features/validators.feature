@@ -24,9 +24,7 @@ Feature: Multiple Validators
     When Owner adds Validator2
     Then Validator2 is a validator
     And contract has 2 validators
-    When Owner adds Validator2 again
-    Then Validator2 is a validator
-    And contract has 2 validators
+    And Owner cannot add Validator2
 
   Scenario: Removing a validator that is not in the list
     When Owner tries to remove Validator3
