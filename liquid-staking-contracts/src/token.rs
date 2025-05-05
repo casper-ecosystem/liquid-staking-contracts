@@ -557,6 +557,17 @@ impl StakedCSPR {
             .self_balance()
             .saturating_sub(self.total_unstakes.get_or_default())
     }
+
+    /// Returns the claim time
+    pub fn get_claim_time(&self) -> u64 {
+        self.claim_time.get_or_default()
+    }
+
+    /// Sets the claim time
+    pub fn set_claim_time(&mut self, claim_time: u64) {
+        self.ownable.assert_owner(&self.env().caller());
+        self.claim_time.set(claim_time);
+    }
 }
 
 impl StakedCSPR {
@@ -579,8 +590,7 @@ impl StakedCSPR {
     }
 
     fn next_claim_time(&self, block_time: u64) -> u64 {
-        let claim_time = self.claim_time.get_or_default();
-        block_time + claim_time
+        block_time + self.get_claim_time()
     }
 
     fn cspr_to_scspr(&self, cspr_stake: U512, staked_cspr: U512) -> U256 {
