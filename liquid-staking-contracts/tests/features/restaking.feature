@@ -37,8 +37,8 @@ Feature: Restaking after validator removal
     And Owner adds Validator5
     And Owner removes Validator1
     And unbonding period passes
-    Then staked CSPR is 0 CSPR
-    And 1000 CSPR is loose
+    Then staked CSPR is 1000 CSPR
+    But 1000 CSPR is loose
     When Owner restakes loose tokens
     Then 2 validators received total 1000 CSPR since last remove in equal amounts
 
@@ -52,7 +52,7 @@ Feature: Restaking after validator removal
     And Owner adds Validator5
     And Owner removes Validator1
     And unbonding period passes
-    Then staked CSPR is 0 CSPR
-    And 2000 CSPR is loose
+    Then staked CSPR is 2000 CSPR
+    But 2000 CSPR is loose
     When Owner restakes loose tokens
     Then 3 validators received total 2000 CSPR since last remove in equal amounts

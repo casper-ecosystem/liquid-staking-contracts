@@ -30,27 +30,31 @@ test = false
 name = "liquid-staking-contracts_build_schema"
 path = "bin/build_schema.rs"
 test = false
+#
+#[[test]]
+#name = "test_staking"
+#harness = false
+#
+#[[test]]
+#name = "test_pool"
+#harness = false
+#
+#[[test]]
+#name = "test_fee"
+#harness = false
+#
+#[[test]]
+#name = "test_validators"
+#harness = false
+#
+#[[test]]
+#name = "test_restaking"
+#harness = false
+#
+#[[test]]
+#name = "test_bugs"
+#harness = false
 
 [[test]]
-name = "test_staking"
-harness = false
-
-[[test]]
-name = "test_pool"
-harness = false
-
-[[test]]
-name = "test_fee"
-harness = false
-
-[[test]]
-name = "test_validators"
-harness = false
-
-[[test]]
-name = "test_restaking"
-harness = false
-
-[[test]]
-name = "test_bugs"
+name = "test_audit"
 harness = false

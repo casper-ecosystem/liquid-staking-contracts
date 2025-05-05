@@ -73,8 +73,8 @@ Feature: Liquid Staking features
     And Owner's token balance is 0.000009998 sCSPR
     And staked CSPR is 0.000009999 CSPR
     When unbonding period passes
-    Then staked CSPR is 0.000001098 CSPR
+    Then staked CSPR is 0.000109998 CSPR
     When Alice claims unstakes
     Then Alice has 1000.0000900 CSPR
     And total supply is 0.000009998 sCSPR
-    And staked CSPR is 0.000001098 CSPR
+    And staked CSPR is 0.000109998 CSPR

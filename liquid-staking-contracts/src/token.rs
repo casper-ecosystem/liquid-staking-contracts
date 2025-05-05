@@ -90,6 +90,8 @@ pub struct StakedCSPR {
     fee_percentage: Var<U512>,
     /// Minimum amount of CSPR that can be staked
     min_stake: Var<U512>,
+    /// The amount of CSPR that was staked in removed validator
+    removed_validator_stake: Var<U512>,
 }
 
 #[odra::module]
@@ -179,7 +181,7 @@ impl StakedCSPR {
         let caller = self.env().caller();
         let cspr_amount = self.env().attached_value();
 
-        let staked_cspr_before = self.staked_cspr();
+        let staked_cspr_before = self.staked_cspr() + self.removed_validator_stake.get_or_default();
 
         self.assert_min_stake(cspr_amount);
         self.collect_fee(staked_cspr_before);
@@ -319,10 +321,10 @@ impl StakedCSPR {
             self.env().revert(MisconfiguredValidator);
         }
 
-        // Sum up delegations from all validators
+        // Sum up delegations from all validators and add currently removed validator stake
         validators.iter().fold(U512::zero(), |acc, validator| {
             acc + self.env().delegated_amount(validator.clone())
-        })
+        }) + self.removed_validator_stake.get_or_default()
     }
 
     /// Returns the minimum stake
@@ -421,9 +423,12 @@ impl StakedCSPR {
     /// Removes a validator from the list of validators
     pub fn remove_validator(&mut self, public_key: PublicKey) {
         self.ownable.assert_owner(&self.env().caller());
+        let staked_cspr = self.staked_cspr();
+        self.collect_fee(staked_cspr);
 
         let mut validators = self.validators.get_or_default();
         let mut removed = false;
+        let mut total_unstaked = U512::zero();
 
         // Find the position of the validator in the list
         if let Some(position) = validators.iter().position(|v| v == &public_key) {
@@ -440,8 +445,10 @@ impl StakedCSPR {
             let cspr_amount = self.env().delegated_amount(public_key.clone());
             if cspr_amount > U512::zero() {
                 self.undelegate(public_key, cspr_amount);
+                total_unstaked = total_unstaked
+                    .checked_add(cspr_amount)
+                    .unwrap_or_revert_with(self, TotalUnstakesOverflow);
             }
-
             removed = true;
         }
 
@@ -449,6 +456,17 @@ impl StakedCSPR {
         if !removed {
             self.env().revert(ValidatorNotInList);
         }
+
+        // Track last recorded delegated amount
+        self.last_recorded_delegated_amount
+            .set(staked_cspr.saturating_sub(total_unstaked));
+
+        // Track removed validator stake
+        self.removed_validator_stake.set(
+            self.removed_validator_stake
+                .get_or_default()
+                .saturating_add(total_unstaked),
+        );
     }
 
     /// Restakes loose tokens
@@ -471,10 +489,20 @@ impl StakedCSPR {
 
         let validators = self.get_random_validators(validators_count);
         let amount_to_delegate = loose_tokens / validators.len();
+
+        let mut delegated_amount = U512::zero();
         for validator in validators.iter() {
             self.delegate(validator.clone(), amount_to_delegate);
+            delegated_amount += amount_to_delegate;
         }
         self.last_recorded_delegated_amount.set(self.staked_cspr());
+
+        // Reduce the removed validator stake by the again delegated amount
+        let removed_validator_stake = self.removed_validator_stake.get_or_default();
+        if !removed_validator_stake.is_zero() {
+            self.removed_validator_stake
+                .set(removed_validator_stake.saturating_sub(delegated_amount));
+        }
     }
 
     /// Returns the list of validators
@@ -568,7 +596,7 @@ impl StakedCSPR {
             return scspr.to_u512();
         }
 
-        let staked_cspr = self.staked_cspr();
+        let staked_cspr = self.staked_cspr() + self.removed_validator_stake.get_or_default();
 
         // If there's no staked CSPR, conversion would be 1:1
         if staked_cspr.is_zero() {
