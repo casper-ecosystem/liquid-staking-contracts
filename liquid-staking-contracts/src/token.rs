@@ -14,9 +14,9 @@ use odra_modules::{
     cep18_token::Cep18,
 };
 
-pub const MIN_STAKE: u128 = 500_000_000_000;
 pub const BENEFICIAL_VALIDATORS_COUNT: usize = 3;
 pub const MAX_FEE_PERCENTAGE: u32 = 10000;
+
 /// Error enum for the StakedCSPR contract
 #[odra::odra_error]
 pub enum Error {
@@ -48,6 +48,8 @@ pub enum Error {
     InvalidFeePercentage = 61413,
     /// The validator exists in the list of validators
     ValidatorAlreadyExists = 61414,
+    /// The min stake is zero
+    InvalidMinStake = 61415,
 }
 
 /// UnstakingInfo struct
@@ -131,6 +133,11 @@ impl StakedCSPR {
         // Check if the fee percentage is above the maximum
         if fee_percentage > MAX_FEE_PERCENTAGE.into() {
             self.revert(InvalidFeePercentage);
+        }
+
+        // Check if the min stake is above the minimum
+        if min_stake == U512::zero() {
+            self.revert(InvalidMinStake);
         }
 
         let admin = self.env().caller();
@@ -487,7 +494,7 @@ impl StakedCSPR {
     /// or claimable) and delegates it to 3 random validators, equally divided
     pub fn restake_loose_tokens(&mut self) {
         self.ownable.assert_owner(&self.env().caller());
-        let min_stake = self.min_stake.get_or_default();
+        let min_stake = self.get_min_stake();
         let loose_tokens = self.get_loose_tokens();
 
         if loose_tokens < min_stake {
@@ -758,8 +765,7 @@ impl StakedCSPR {
     }
 
     fn assert_min_stake(&self, stake: U512) {
-        let min_stake = self.min_stake.get_or_default();
-        if stake < min_stake {
+        if stake < self.get_min_stake() {
             self.env().revert(StakeBelowMinimum);
         }
     }
@@ -767,6 +773,9 @@ impl StakedCSPR {
 
 #[cfg(test)]
 mod tests {
+
+    const MIN_STAKE: u128 = 500_000_000_000;
+
     // Add this at the beginning of the tests module
     #[cfg(test)]
     mod state_writer {

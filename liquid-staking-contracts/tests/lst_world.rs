@@ -1,14 +1,14 @@
 use std::{collections::HashMap, ops::Deref, str::FromStr};
 
 use cucumber::{Parameter, World};
-use liquid_staking_contracts::token::{
-    StakedCSPR, StakedCSPRHostRef, StakedCSPRInitArgs, MIN_STAKE,
-};
+use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRHostRef, StakedCSPRInitArgs};
 use odra::{
     casper_types::{PublicKey, U256, U512},
     host::Deployer,
 };
 use odra_bdd::{bdd_env::BDDEnv, types::token_amount::TokenAmount};
+
+pub const WORLD_MIN_STAKE: u128 = 500_000_000_000;
 
 #[derive(World)]
 pub struct LSTWorld {
@@ -28,7 +28,7 @@ impl Default for LSTWorld {
                 validator_address,
                 claim_time: env.env().auction_delay() * 8,
                 fee_percentage: 1000.into(),
-                min_stake: U512::from(MIN_STAKE),
+                min_stake: U512::from(WORLD_MIN_STAKE),
             },
         );
         Self {
