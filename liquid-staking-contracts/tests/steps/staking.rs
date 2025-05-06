@@ -1,6 +1,7 @@
 use crate::lst_world::{LSTWorld, StakedCSPRAmount};
-use cucumber::when;
+use cucumber::{then, when};
 use odra::host::HostRef;
+use odra::prelude::OdraError;
 use odra_bdd::types::account::Account;
 use odra_bdd::types::cspr::CSPRAmount;
 
@@ -47,6 +48,14 @@ fn remove_from_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSP
     world.update_pool_state("remove_from_the_pool");
 }
 
+#[when(expr = "{account} removes everything from the pool")]
+fn remove_everything_from_the_pool(world: &mut LSTWorld, account: Account) {
+    world.env.set_caller(&account);
+    let cspr_amount = world.token.get_total_stake();
+    world.token.remove_from_the_pool(cspr_amount);
+    world.update_pool_state("remove_from_the_pool");
+}
+
 #[when(expr = "{account} withdraws {cspr_amount} CSPR from the contract")]
 fn withdraw_from_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
     world.env.set_caller(&account);
@@ -65,4 +74,16 @@ fn try_withdraw_from_the_pool(world: &mut LSTWorld, account: Account, cspr_amoun
 fn restake_loose_tokens(world: &mut LSTWorld, account: Account) {
     world.env.set_caller(&account);
     world.token.restake_loose_tokens();
+}
+
+#[then(expr = "{account} cannot unstake {scspr} sCSPR because there's no backing for redemption")]
+fn cannot_unstake_because_no_backing(
+    world: &mut LSTWorld,
+    account: Account,
+    scspr: StakedCSPRAmount,
+) {
+    world.env.set_caller(&account);
+    let result = world.token.try_unstake(scspr.amount());
+    assert_eq!(result.err().unwrap(), OdraError::user(61416));
+    world.update_pool_state("cannot_unstake_because_no_backing");
 }

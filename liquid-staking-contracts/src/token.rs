@@ -50,6 +50,8 @@ pub enum Error {
     ValidatorAlreadyExists = 61414,
     /// The min stake is zero
     InvalidMinStake = 61415,
+    /// No backing for redemption
+    NoBackingForRedemption = 61416,
 }
 
 /// UnstakingInfo struct
@@ -623,14 +625,14 @@ impl StakedCSPR {
         let scspr_total_supply = self.token.total_supply().to_u512();
 
         if scspr_total_supply.is_zero() {
-            return scspr.to_u512();
+            self.env().revert(NoBackingForRedemption);
         }
 
         let staked_cspr = self.staked_cspr() + self.removed_validator_stake.get_or_default();
 
         // If there's no staked CSPR, conversion would be 1:1
         if staked_cspr.is_zero() {
-            return scspr.to_u512();
+            self.env().revert(NoBackingForRedemption);
         }
 
         // Calculate CSPR amount using the formula: scspr * staked_cspr / scspr_total_supply
