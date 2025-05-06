@@ -37,7 +37,7 @@ fn claim_unstake(world: &mut LSTWorld, account: Account) {
 #[when(expr = "{account} adds {cspr_amount} CSPR to the pool")]
 fn add_to_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
     world.env.set_caller(&account);
-    world.token.with_tokens(*cspr_amount).add_to_the_pool();
+    world.token.with_tokens(*cspr_amount).add_to_the_pool_without_staking();
     world.update_pool_state("add_to_the_pool");
 }
 

@@ -361,7 +361,7 @@ impl StakedCSPR {
     /// This function is payable, the attached value is the amount of CSPR to add to the pool
     /// No sCSPR is minted, only CSPR is added to the pool, which affect the price of sCSPR
     #[odra(payable)]
-    pub fn add_to_the_pool(&mut self) {
+    pub fn add_to_the_pool_without_staking(&mut self) {
         let attached_value = self.env().attached_value();
         self.assert_min_stake(attached_value);
         let staked_cspr = self.staked_cspr();
