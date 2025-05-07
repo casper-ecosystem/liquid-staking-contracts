@@ -574,6 +574,20 @@ impl StakedCSPR {
         self.ownable.assert_owner(&self.env().caller());
         self.claim_time.set(claim_time);
     }
+
+    /// Returns the fee_percentage
+    pub fn get_fee_percentage(&self) -> U512 {
+        self.fee_percentage.get_or_default()
+    }
+
+    /// Sets the fee_percentage
+    pub fn set_fee_percentage(&mut self, fee_percentage: U512) {
+        self.ownable.assert_owner(&self.env().caller());
+        if fee_percentage > MAX_FEE_PERCENTAGE.into() {
+            self.env().revert(InvalidFeePercentage);
+        }
+        self.fee_percentage.set(fee_percentage);
+    }
 }
 
 impl StakedCSPR {

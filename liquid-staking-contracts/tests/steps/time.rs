@@ -23,25 +23,3 @@ fn advance_unbonding_period(world: &mut LSTWorld) {
     let advance = auction_delay * 8;
     world.env.env().advance_with_auctions(advance.into());
 }
-
-#[then(expr = "the claim_time is {int} seconds")]
-#[then(expr = "the claim_time is still {int} seconds")]
-fn get_claim_time(world: &mut LSTWorld, claim_time: u64) {
-    let claim_time_millis = claim_time * 1000;
-    assert_eq!(world.token.get_claim_time(), claim_time_millis);
-}
-
-#[when(expr = "{account} changes the claim_time to {int} seconds")]
-fn change_claim_time(world: &mut LSTWorld, account: Account, claim_time: u64) {
-    world.env.set_caller(&account);
-    let claim_time_millis = claim_time * 1000;
-    world.token.set_claim_time(claim_time_millis);
-}
-
-#[when(expr = "{account} tries to change the claim_time to {int} seconds")]
-fn cannot_change_claim_time(world: &mut LSTWorld, account: Account, claim_time: u64) {
-    world.env.set_caller(&account);
-    let claim_time_millis = claim_time * 1000;
-    let result = world.token.try_set_claim_time(claim_time_millis);
-    assert!(result.is_err());
-}

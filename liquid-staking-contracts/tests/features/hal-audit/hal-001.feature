@@ -3,7 +3,7 @@ Feature: Fix for HAL-001
   Scenario: Validator removal bypasses fee collection and breaks delegation tracking
     Given Alice has 1000 CSPR
     And Owner has 0 CSPR
-    And Alice stakes 1000 CSPR
+    When Alice stakes 1000 CSPR
     And 2 auction passes
     Then 1000.000099999 CSPR is staked
     And Owner has 0 sCSPR

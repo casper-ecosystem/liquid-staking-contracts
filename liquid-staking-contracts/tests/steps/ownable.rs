@@ -23,6 +23,7 @@ fn accept_ownership(world: &mut LSTWorld, account: Account) {
 }
 
 #[then(expr = "{account} is not the contract owner")]
+#[given(expr = "{account} is not the contract owner")]
 fn check_new_owner(world: &mut LSTWorld, account: Account) {
     assert_ne!(world.token.get_owner(), world.env.get_address(&account));
 }
