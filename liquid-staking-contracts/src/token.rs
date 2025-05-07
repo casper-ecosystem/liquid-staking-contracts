@@ -251,11 +251,13 @@ impl StakedCSPR {
         let new_unstake_id = self.unstakes.len();
         account_unstake_ids.push(new_unstake_id);
 
+        let next_claim_time = self.next_claim_time(block_time);
+
         self.unstakes.push(UnstakingInfo {
             unstake_id: new_unstake_id,
             owner: caller,
             cspr_amount,
-            claimable_from: self.next_claim_time(block_time),
+            claimable_from: next_claim_time.clone(),
             claimed: false,
         });
 
@@ -268,7 +270,7 @@ impl StakedCSPR {
             cspr_amount,
             scspr_burned: scspr_amount,
             unstake_id: new_unstake_id,
-            claim_time: self.next_claim_time(block_time),
+            claim_time: next_claim_time,
         });
 
         self.last_recorded_delegated_amount.set(self.staked_cspr());
@@ -500,7 +502,7 @@ impl StakedCSPR {
         let loose_tokens = self.get_loose_tokens();
 
         if loose_tokens < min_stake {
-            self.env().revert(InsufficientBalance);
+            self.env().revert(NotAnOwner);
         }
 
         let validators_count = if loose_tokens < min_stake * BENEFICIAL_VALIDATORS_COUNT {
@@ -714,6 +716,11 @@ impl StakedCSPR {
         selected_indices
     }
 
+    // Extract u32 from 4 bytes at specified offset
+    fn extract_u32_from_bytes(&self, bytes: &[u8]) -> usize {
+        u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize
+    }
+
     fn get_random_validators(&self, amount: usize) -> Vec<PublicKey> {
         let validators = self.validators.get_or_revert_with(MisconfiguredValidator);
 
@@ -721,14 +728,12 @@ impl StakedCSPR {
             self.env().revert(MisconfiguredValidator);
         }
 
-        // Just get a single random index
-        // It uses the block time as a seed, so it's deterministic
-        // But it is sufficient for our purposes
-        let indices = self.get_random_validator_indices(
-            amount,
-            validators.len(),
-            self.env().get_block_time() as usize,
-        );
+        // Use pseudorandom_bytes(32) to get a seed value
+        let random_bytes = self.env().pseudorandom_bytes(4);
+        // Use first 4 bytes as seed by interpreting them as a u32
+        let seed = self.extract_u32_from_bytes(&random_bytes);
+
+        let indices = self.get_random_validator_indices(amount, validators.len(), seed);
 
         indices.iter().map(|i| validators[*i].clone()).collect()
     }
@@ -741,12 +746,13 @@ impl StakedCSPR {
             self.env().revert(MisconfiguredValidator);
         }
 
+        // Use pseudorandom_bytes(32) to get a random index - reuse the same random bytes for multiple purposes
+        let random_bytes = self.env().pseudorandom_bytes(4);
+        // Use bytes at offset 4 as seed by interpreting them as a u32
+        let seed = self.extract_u32_from_bytes(&random_bytes);
+
         // Start from a random index
-        let start_idx = self.get_random_validator_indices(
-            1,
-            validators.len(),
-            self.env().get_block_time() as usize,
-        )[0];
+        let start_idx = self.get_random_validator_indices(1, validators.len(), seed)[0];
         let len = validators.len();
 
         // Try each validator starting from the random index, wrapping around
