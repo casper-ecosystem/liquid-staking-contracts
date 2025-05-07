@@ -8,8 +8,8 @@ use odra::{
     prelude::*,
     uints::{ToU256, ToU512},
 };
+use odra_modules::access::Ownable2Step;
 use odra_modules::{
-    access::Ownable,
     cep18::{errors::Error as Cep18Error, utils::Cep18Modality},
     cep18_token::Cep18,
 };
@@ -78,7 +78,7 @@ struct UnstakingInfo {
 )]
 pub struct StakedCSPR {
     /// Ownable module
-    ownable: SubModule<Ownable>,
+    ownable: SubModule<Ownable2Step>,
     /// Token module
     token: SubModule<Cep18>,
     /// Unstake ids for each user
@@ -122,6 +122,7 @@ impl StakedCSPR {
         to self.ownable {
             fn get_owner(&self) -> Address;
             fn transfer_ownership(&mut self, new_owner: &Address);
+            fn accept_ownership(&mut self);
         }
     }
 
