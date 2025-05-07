@@ -390,13 +390,14 @@ impl StakedCSPR {
     pub fn remove_from_the_pool(&mut self, amount: U512) {
         self.ownable.assert_owner(&self.env().caller());
         let staked_cspr = self.staked_cspr();
-        self.collect_fee(staked_cspr);
         let actual_unstaked = self.undelegate_from_validators(amount);
 
         // If we couldn't undelegate the full amount, revert
         if actual_unstaked < amount {
             self.env().revert(InsufficientBalance);
         }
+
+        self.collect_fee(staked_cspr);
 
         // Emit event for removing CSPR from the pool
         self.env().emit_event(CsprRemovedFromPool {
