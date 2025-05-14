@@ -1,11 +1,12 @@
 use crate::lst_world::{LSTWorld, StakedCSPRAmount};
-use cucumber::{then, when};
+use cucumber::{given, then, when};
 use odra::host::HostRef;
 use odra::prelude::OdraError;
 use odra_bdd::types::account::Account;
 use odra_bdd::types::cspr::CSPRAmount;
 
 #[when(expr = "{account} stakes {cspr_amount} CSPR")]
+#[given(expr = "{account} stakes {cspr_amount} CSPR")]
 fn stake_cspr(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
     world.env.set_caller(&account);
     world.token.with_tokens(*cspr_amount).stake();

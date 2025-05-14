@@ -1,5 +1,5 @@
 use crate::lst_world::LSTWorld;
-use cucumber::{then, when};
+use cucumber::when;
 
 #[when(expr = "{int} eras pass")]
 fn advance_eras(world: &mut LSTWorld, eras: u32) {

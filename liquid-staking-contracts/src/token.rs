@@ -9,6 +9,7 @@ use odra::{
     uints::{ToU256, ToU512},
 };
 use odra_modules::access::Ownable2Step;
+use odra_modules::security::Pauseable;
 use odra_modules::{
     cep18::{errors::Error as Cep18Error, utils::Cep18Modality},
     cep18_token::Cep18,
@@ -79,6 +80,8 @@ struct UnstakingInfo {
 pub struct StakedCSPR {
     /// Ownable module
     ownable: SubModule<Ownable2Step>,
+    /// Pauseable module
+    pauseable: SubModule<Pauseable>,
     /// Token module
     token: SubModule<Cep18>,
     /// Unstake ids for each user
@@ -112,11 +115,6 @@ impl StakedCSPR {
             fn total_supply(&self) -> U256;
             fn balance_of(&self, account: &Address) -> U256;
             fn allowance(&self, owner: &Address, spender: &Address) -> U256;
-            fn transfer(&mut self, recipient: &Address, amount: &U256);
-            fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256);
-            fn approve(&mut self, spender: &Address, amount: &U256);
-            fn decrease_allowance(&mut self, spender: &Address, decr_by: &U256);
-            fn increase_allowance(&mut self, spender: &Address, inc_by: &U256);
         }
 
         to self.ownable {
@@ -198,6 +196,8 @@ impl StakedCSPR {
     /// This function is payable, the attached value is the amount of CSPR to stake
     #[odra(payable)]
     pub fn stake(&mut self) {
+        self.pauseable.require_not_paused();
+
         let caller = self.env().caller();
         let cspr_amount = self.env().attached_value();
 
@@ -228,6 +228,8 @@ impl StakedCSPR {
     ///
     /// * `scspr_amount` - The amount of sCSPR to unstake
     pub fn unstake(&mut self, scspr_amount: U256) {
+        self.pauseable.require_not_paused();
+
         self.collect_fee(self.staked_cspr());
         let block_time = self.env().get_block_time();
 
@@ -280,6 +282,8 @@ impl StakedCSPR {
     /// Claims unstaked CSPR
     /// It checks all claims that are claimable and claims them for the caller
     pub fn claim(&mut self) {
+        self.pauseable.require_not_paused();
+
         let caller = self.env().caller();
         let mut unstake_ids = self.unstake_ids.get_or_default(&self.env().caller());
         let mut indices_to_remove = Vec::new();
@@ -433,7 +437,9 @@ impl StakedCSPR {
     /// This function is payable, the attached value is the amount of CSPR to add
     /// to the contract, without staking it.
     #[odra(payable)]
-    pub fn add_loose_tokens(&self) {}
+    pub fn add_loose_tokens(&self) {
+        self.ownable.assert_owner(&self.env().caller());
+    }
 
     /// Restakes loose tokens
     /// Checks the amount of loose tokens (CSPR on the contract which is not staked
@@ -527,6 +533,53 @@ impl StakedCSPR {
             self.env().revert(InvalidFeePercentage);
         }
         self.fee_percentage.set(fee_percentage);
+    }
+
+    /// Pauses the contract
+    pub fn pause(&mut self) {
+        self.ownable.assert_owner(&self.env().caller());
+        self.pauseable.pause();
+    }
+
+    /// Unpauses the contract
+    pub fn unpause(&mut self) {
+        self.ownable.assert_owner(&self.env().caller());
+        self.pauseable.unpause();
+    }
+
+    /// Returns whether the contract is paused
+    pub fn is_paused(&self) -> bool {
+        self.pauseable.is_paused()
+    }
+
+    /// Transfers tokens from the caller to the recipient.
+    pub fn transfer(&mut self, recipient: &Address, amount: &U256) {
+        self.pauseable.require_not_paused();
+        self.token.transfer(recipient, amount);
+    }
+
+    /// Transfers tokens from the owner to the recipient using the spender's allowance.
+    pub fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
+        self.pauseable.require_not_paused();
+        self.token.transfer_from(owner, recipient, amount);
+    }
+
+    /// Approves the spender to spend the given amount of tokens on behalf of the caller.
+    pub fn approve(&mut self, spender: &Address, amount: &U256) {
+        self.pauseable.require_not_paused();
+        self.token.approve(spender, amount);
+    }
+
+    /// Decreases the allowance of the spender by the given amount.
+    pub fn decrease_allowance(&mut self, spender: &Address, decr_by: &U256) {
+        self.pauseable.require_not_paused();
+        self.token.decrease_allowance(spender, decr_by);
+    }
+
+    /// Increases the allowance of the spender by the given amount.
+    pub fn increase_allowance(&mut self, spender: &Address, inc_by: &U256) {
+        self.pauseable.require_not_paused();
+        self.token.increase_allowance(spender, inc_by);
     }
 }
 

@@ -62,3 +62,7 @@ harness = false
 [[test]]
 name = "test_configuration"
 harness = false
+
+[[test]]
+name = "test_pauseable"
+harness = false
