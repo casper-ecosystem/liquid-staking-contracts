@@ -37,40 +37,9 @@ fn claim_unstake(world: &mut LSTWorld, account: Account) {
 #[when(expr = "{account} adds {cspr_amount} CSPR to the pool")]
 fn add_to_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
     world.env.set_caller(&account);
-    world
-        .token
-        .with_tokens(*cspr_amount)
-        .add_to_the_pool_without_staking();
+    world.token.with_tokens(*cspr_amount).add_loose_tokens();
+    world.token.restake_loose_tokens();
     world.update_pool_state("add_to_the_pool");
-}
-
-#[when(expr = "{account} removes {cspr_amount} CSPR from the pool")]
-fn remove_from_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
-    world.env.set_caller(&account);
-    world.token.remove_from_the_pool(*cspr_amount);
-    world.update_pool_state("remove_from_the_pool");
-}
-
-#[when(expr = "{account} removes everything from the pool")]
-fn remove_everything_from_the_pool(world: &mut LSTWorld, account: Account) {
-    world.env.set_caller(&account);
-    let cspr_amount = world.token.get_total_stake();
-    world.token.remove_from_the_pool(cspr_amount);
-    world.update_pool_state("remove_from_the_pool");
-}
-
-#[when(expr = "{account} withdraws {cspr_amount} CSPR from the contract")]
-fn withdraw_from_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
-    world.env.set_caller(&account);
-    world.token.withdraw_from_the_contract(*cspr_amount);
-    world.update_pool_state("withdraw_from_the_contract");
-}
-
-#[when(expr = "{account} tries to withdraw {cspr_amount} CSPR")]
-fn try_withdraw_from_the_pool(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
-    world.env.set_caller(&account);
-    let _ = world.token.try_withdraw_from_the_contract(*cspr_amount);
-    world.update_pool_state("withdraw_from_the_contract");
 }
 
 #[when(expr = "{account} restakes loose tokens")]

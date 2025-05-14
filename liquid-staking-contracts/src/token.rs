@@ -360,72 +360,6 @@ impl StakedCSPR {
         self.min_stake.set(min_stake);
     }
 
-    /// Adds CSPR to the pool
-    /// This function is payable, the attached value is the amount of CSPR to add to the pool
-    /// No sCSPR is minted, only CSPR is added to the pool, which affect the price of sCSPR
-    #[odra(payable)]
-    pub fn add_to_the_pool_without_staking(&mut self) {
-        let attached_value = self.env().attached_value();
-        self.assert_min_stake(attached_value);
-        let staked_cspr = self.staked_cspr();
-        self.collect_fee(staked_cspr);
-
-        // Get random validators and verify that we have at least one
-        let validators = self.get_random_validators(1);
-        if validators.is_empty() {
-            self.env().revert(MisconfiguredValidator);
-        }
-
-        self.delegate(validators[0].clone(), self.env().attached_value());
-
-        // Emit event for adding CSPR to the pool
-        self.env().emit_event(CsprAddedToPool {
-            amount: attached_value,
-        });
-
-        self.last_recorded_delegated_amount
-            .set(staked_cspr + attached_value);
-    }
-
-    /// Removes CSPR from the pool
-    pub fn remove_from_the_pool(&mut self, amount: U512) {
-        self.ownable.assert_owner(&self.env().caller());
-        let staked_cspr = self.staked_cspr();
-        let actual_unstaked = self.undelegate_from_validators(amount);
-
-        // If we couldn't undelegate the full amount, revert
-        if actual_unstaked < amount {
-            self.env().revert(InsufficientBalance);
-        }
-
-        self.collect_fee(staked_cspr);
-
-        // Emit event for removing CSPR from the pool
-        self.env().emit_event(CsprRemovedFromPool {
-            amount: actual_unstaked,
-        });
-
-        self.last_recorded_delegated_amount
-            .set(staked_cspr - amount);
-    }
-
-    /// Withdraws CSPR from the contract
-    pub fn withdraw_from_the_contract(&mut self, amount: U512) {
-        let caller = self.env().caller();
-        self.ownable.assert_owner(&caller);
-
-        // Only allow withdrawing loose tokens
-        if amount > self.get_loose_tokens() {
-            self.env().revert(InsufficientBalance);
-        }
-
-        self.env().transfer_tokens(&self.env().caller(), &amount);
-        self.env().emit_event(CsprWithdrawnFromContract {
-            amount,
-            recipient: caller,
-        });
-    }
-
     /// Adds a validator to the list of validators
     pub fn add_validator(&mut self, public_key: PublicKey) {
         self.ownable.assert_owner(&self.env().caller());
@@ -494,6 +428,12 @@ impl StakedCSPR {
                 .saturating_add(total_unstaked),
         );
     }
+
+    /// Adds loose tokens to the contract
+    /// This function is payable, the attached value is the amount of CSPR to add
+    /// to the contract, without staking it.
+    #[odra(payable)]
+    pub fn add_loose_tokens(&self) {}
 
     /// Restakes loose tokens
     /// Checks the amount of loose tokens (CSPR on the contract which is not staked

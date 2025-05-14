@@ -3,22 +3,9 @@ Feature: Rewards pool
     Given Owner has 1000 CSPR
     When Owner adds 1000 CSPR to the pool
     Then 1000 CSPR is staked
-    When Owner removes 500 CSPR from the pool
-    Then 500 CSPR is staked
 
   Scenario: Check basic staking
     Given Alice has 200000 CSPR
     When Alice stakes 200000 CSPR
     And 2 auction passes
     Then more than 200000 CSPR is staked
-
-  Scenario: Withdrawing more than the contract has
-    When Owner adds 1000 CSPR to the pool
-    Then 1000 CSPR is staked
-    When Owner removes 1000 CSPR from the pool
-    And unbonding period passes
-    Then 0 CSPR is staked
-    And the contract has 1000 CSPR
-    When Owner tries to withdraw 2000 CSPR
-    Then 0 CSPR is staked
-    And the contract has 1000 CSPR

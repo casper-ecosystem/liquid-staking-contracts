@@ -1,6 +1,5 @@
 use crate::lst_world::LSTWorld;
 use cucumber::{then, when};
-use odra_bdd::types::account::Account;
 
 #[when(expr = "{int} eras pass")]
 fn advance_eras(world: &mut LSTWorld, eras: u32) {
