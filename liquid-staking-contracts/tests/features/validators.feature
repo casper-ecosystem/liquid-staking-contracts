@@ -64,3 +64,20 @@ Feature: Multiple Validators
     Then Owner has 0.000009999 CSPR
     And 0 CSPR is staked
     And 0 sCSPR is in the pool
+
+  Scenario: Validator withdraws its bid
+    Given Alice has 1000 CSPR
+    And Alice stakes 1000 CSPR
+    Then 1000 CSPR is staked
+    And Alice has 1000 sCSPR
+    When Validator1 withdraws its bid
+    Then 0 CSPR is staked
+    And 0 CSPR is loose
+    When Owner adds Validator2
+    And Owner removes Validator1
+    And 10 auction passes
+    Then 1000 CSPR is loose
+    And 0 CSPR is staked
+    When Owner restakes loose tokens
+    Then 1000 CSPR is really staked
+    And 1000 sCSPR is in the pool

@@ -16,6 +16,11 @@ fn get_cspr_balance(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmo
     assert_eq!(cspr_amount, world.env.get_balance(&account));
 }
 
+#[then(expr = "removed validator stake is {cspr_amount} CSPR")]
+fn removed_validator_stake(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
+    assert_eq!(cspr_amount.amount(), world.token.removed_validator_stake());
+}
+
 #[then(expr = "{account} has {scspr} sCSPR")]
 #[then(expr = "{account}'s sCSPR balance is {scspr}")]
 fn get_token_balance(world: &mut LSTWorld, account: Account, scspr: StakedCSPRAmount) {
@@ -56,6 +61,18 @@ fn check_staked_cspr(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
 #[then(expr = "more than {cspr_amount} CSPR is staked")]
 fn check_more_than_staked_cspr(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
     assert!(world.token.staked_cspr() > cspr_amount.amount());
+}
+
+#[then(expr = "{cspr_amount} CSPR is really staked")]
+fn check_really_staked_cspr(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
+    let validators = world.token.get_validators();
+    let total_stake = validators.iter().fold(U512::zero(), |acc, validator| {
+        acc + world
+            .env
+            .env()
+            .delegated_amount(*world.token.address(), validator.clone())
+    });
+    assert_eq!(cspr_amount.amount(), total_stake);
 }
 
 #[then(expr = "Validator{int} has {cspr_amount} CSPR in his staking pool")]

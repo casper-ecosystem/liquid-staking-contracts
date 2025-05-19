@@ -69,3 +69,8 @@ fn try_add_validator(world: &mut LSTWorld, account: Account, validator_num: u32)
         "Expected an error when trying to add a validator"
     );
 }
+
+#[when(expr = "Validator{int} withdraws its bid")]
+fn evict_validator(world: &mut LSTWorld, validator_num: u32) {
+    world.env.env().remove_validator(validator_num as usize - 1);
+}

@@ -201,7 +201,7 @@ impl StakedCSPR {
         let caller = self.env().caller();
         let cspr_amount = self.env().attached_value();
 
-        let staked_cspr_before = self.staked_cspr() + self.removed_validator_stake.get_or_default();
+        let staked_cspr_before = self.staked_cspr();
 
         self.assert_min_stake(cspr_amount);
         self.collect_fee(staked_cspr_before);
@@ -450,7 +450,7 @@ impl StakedCSPR {
         let loose_tokens = self.get_loose_tokens();
 
         if loose_tokens < min_stake {
-            self.env().revert(NotAnOwner);
+            self.env().revert(StakeBelowMinimum);
         }
 
         let validators_count = if loose_tokens < min_stake * BENEFICIAL_VALIDATORS_COUNT {
@@ -467,7 +467,6 @@ impl StakedCSPR {
             self.delegate(validator.clone(), amount_to_delegate);
             delegated_amount += amount_to_delegate;
         }
-        self.last_recorded_delegated_amount.set(self.staked_cspr());
 
         // Reduce the removed validator stake by the again delegated amount
         let removed_validator_stake = self.removed_validator_stake.get_or_default();
@@ -475,6 +474,8 @@ impl StakedCSPR {
             self.removed_validator_stake
                 .set(removed_validator_stake.saturating_sub(delegated_amount));
         }
+
+        self.last_recorded_delegated_amount.set(self.staked_cspr());
     }
 
     /// Returns the list of validators
@@ -580,6 +581,11 @@ impl StakedCSPR {
     pub fn increase_allowance(&mut self, spender: &Address, inc_by: &U256) {
         self.pauseable.require_not_paused();
         self.token.increase_allowance(spender, inc_by);
+    }
+
+    /// Returns the amount of stake that was removed from the contract
+    pub fn removed_validator_stake(&self) -> U512 {
+        self.removed_validator_stake.get_or_default()
     }
 }
 
