@@ -1,5 +1,8 @@
+use std::str::FromStr;
+
 use crate::lst_world::{LSTWorld, StakedCSPRAmount};
 use cucumber::{given, then};
+use liquid_staking_contracts::events::Unstaked;
 use odra::casper_types::U512;
 use odra::Addressable;
 use odra_bdd::types::account::Account;
@@ -198,4 +201,19 @@ fn random_validators_check(world: &mut LSTWorld, validators_count: u32, cspr: CS
         total,
         expected
     );
+}
+
+#[then(expr = "unstake event says {account} will receive {cspr_amount} CSPR")]
+fn check_unstake_event(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
+    let unstake_event: Unstaked = world
+        .env
+        .env()
+        .get_event(world.token.address(), -1)
+        .unwrap();
+    assert_eq!(
+        unstake_event.scspr_burned,
+        StakedCSPRAmount::from_str("1000").unwrap().amount()
+    );
+    assert_eq!(unstake_event.address, world.env.get_address(&account));
+    assert_eq!(unstake_event.cspr_amount, cspr_amount.amount());
 }

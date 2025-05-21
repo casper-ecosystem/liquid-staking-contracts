@@ -53,6 +53,8 @@ pub enum Error {
     InvalidMinStake = 61415,
     /// No backing for redemption
     NoBackingForRedemption = 61416,
+    /// The amount of sCSPR to unstake is zero
+    InvalidUnstakeAmount = 61417,
 }
 
 /// UnstakingInfo struct
@@ -230,6 +232,10 @@ impl StakedCSPR {
     pub fn unstake(&mut self, scspr_amount: U256) {
         self.pauseable.require_not_paused();
 
+        if scspr_amount == U256::zero() {
+            self.env().revert(InvalidUnstakeAmount);
+        }
+
         self.collect_fee(self.staked_cspr());
         let block_time = self.env().get_block_time();
 
@@ -260,7 +266,7 @@ impl StakedCSPR {
             unstake_id: new_unstake_id,
             owner: caller,
             cspr_amount,
-            claimable_from: next_claim_time.clone(),
+            claimable_from: next_claim_time,
             claimed: false,
         });
 
@@ -645,7 +651,7 @@ impl StakedCSPR {
             self.env().revert(NoBackingForRedemption);
         }
 
-        let staked_cspr = self.staked_cspr() + self.removed_validator_stake.get_or_default();
+        let staked_cspr = self.staked_cspr();
 
         // If there's no staked CSPR, conversion would be 1:1
         if staked_cspr.is_zero() {

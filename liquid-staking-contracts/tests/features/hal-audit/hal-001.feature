@@ -43,3 +43,23 @@ Feature: Fix for HAL-001
     When Bob stakes 1000 CSPR
     # Before the fix, Bob would have around 500 sCSPR instead
     Then Bob has 999.999190007 sCSPR
+
+  Scenario: Counting removed validator stake during unstaking
+    Given the contract is deployed with 1000 basis points fee
+    And Alice has 5000 CSPR
+    And Bob has 1000 CSPR
+    When Alice stakes 1000 CSPR
+    Then 1000 CSPR is staked
+    When Owner adds Validator2
+    When Owner removes Validator1
+    Then removed validator stake is 1000 CSPR
+    And 1000 CSPR is staked
+    Then Alice has 1000 sCSPR
+    And Bob has 0 sCSPR
+    When Alice stakes 4000 CSPR
+    And Bob stakes 1000 CSPR
+    When Bob unstakes everything
+    # Before the fix, Bob would have received ~1166 CSPR instead
+    Then unstake event says Bob will receive 1000 CSPR
+
+
