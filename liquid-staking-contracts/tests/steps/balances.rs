@@ -1,5 +1,8 @@
+use std::str::FromStr;
+
 use crate::lst_world::{LSTWorld, StakedCSPRAmount};
 use cucumber::{given, then};
+use liquid_staking_contracts::events::Unstaked;
 use odra::casper_types::U512;
 use odra::Addressable;
 use odra_bdd::types::account::Account;
@@ -14,6 +17,11 @@ fn set_cspr_balance(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmo
 #[then(expr = "{account}'s CSPR balance is {cspr_amount} CSPR")]
 fn get_cspr_balance(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
     assert_eq!(cspr_amount, world.env.get_balance(&account));
+}
+
+#[then(expr = "removed validator stake is {cspr_amount} CSPR")]
+fn removed_validator_stake(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
+    assert_eq!(cspr_amount.amount(), world.token.removed_validator_stake());
 }
 
 #[then(expr = "{account} has {scspr} sCSPR")]
@@ -56,6 +64,18 @@ fn check_staked_cspr(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
 #[then(expr = "more than {cspr_amount} CSPR is staked")]
 fn check_more_than_staked_cspr(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
     assert!(world.token.staked_cspr() > cspr_amount.amount());
+}
+
+#[then(expr = "{cspr_amount} CSPR is really staked")]
+fn check_really_staked_cspr(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
+    let validators = world.token.get_validators();
+    let total_stake = validators.iter().fold(U512::zero(), |acc, validator| {
+        acc + world
+            .env
+            .env()
+            .delegated_amount(*world.token.address(), validator.clone())
+    });
+    assert_eq!(cspr_amount.amount(), total_stake);
 }
 
 #[then(expr = "Validator{int} has {cspr_amount} CSPR in his staking pool")]
@@ -181,4 +201,19 @@ fn random_validators_check(world: &mut LSTWorld, validators_count: u32, cspr: CS
         total,
         expected
     );
+}
+
+#[then(expr = "unstake event says {account} will receive {cspr_amount} CSPR")]
+fn check_unstake_event(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
+    let unstake_event: Unstaked = world
+        .env
+        .env()
+        .get_event(world.token.address(), -1)
+        .unwrap();
+    assert_eq!(
+        unstake_event.scspr_burned,
+        StakedCSPRAmount::from_str("1000").unwrap().amount()
+    );
+    assert_eq!(unstake_event.address, world.env.get_address(&account));
+    assert_eq!(unstake_event.cspr_amount, cspr_amount.amount());
 }

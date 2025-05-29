@@ -1,7 +1,6 @@
 use crate::lst_world::LSTWorld;
 use cucumber::{given, then, when};
 use odra_bdd::types::account::Account;
-use odra_modules::access::errors::Error::CallerNotTheOwner;
 
 #[given(expr = "Owner deploys a contract with Validator{int}")]
 fn deploy_with_validator(world: &mut LSTWorld, validator_num: u32) {
@@ -59,6 +58,7 @@ fn try_remove_validator(world: &mut LSTWorld, account: Account, validator_num: u
 }
 
 #[when(expr = "{account} tries to add Validator{int}")]
+#[then(expr = "{account} cannot add Validator{int}")]
 fn try_add_validator(world: &mut LSTWorld, account: Account, validator_num: u32) {
     world.env.set_caller(&account);
     let validator_address = world.env.env().get_validator(validator_num as usize - 1);
@@ -66,12 +66,11 @@ fn try_add_validator(world: &mut LSTWorld, account: Account, validator_num: u32)
 
     assert!(
         result.is_err(),
-        "Expected an error when unprivileged account tries to add validator"
+        "Expected an error when trying to add a validator"
     );
+}
 
-    assert_eq!(
-        result.unwrap_err(),
-        CallerNotTheOwner.into(),
-        "Expected NotAnOwner error when unprivileged account tries to add validator"
-    );
+#[when(expr = "Validator{int} withdraws its bid")]
+fn evict_validator(world: &mut LSTWorld, validator_num: u32) {
+    world.env.env().remove_validator(validator_num as usize - 1);
 }

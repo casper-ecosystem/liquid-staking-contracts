@@ -24,9 +24,7 @@ Feature: Multiple Validators
     When Owner adds Validator2
     Then Validator2 is a validator
     And contract has 2 validators
-    When Owner adds Validator2 again
-    Then Validator2 is a validator
-    And contract has 2 validators
+    And Owner cannot add Validator2
 
   Scenario: Removing a validator that is not in the list
     When Owner tries to remove Validator3
@@ -40,3 +38,46 @@ Feature: Multiple Validators
     When Owner removes Validator2
     Then Validator2 is not a validator
     And contract has 1 validator
+
+  Scenario: Removing a validator with unbonding period, restaking loose tokens, recording unstaked amount
+    Given Alice has 1000 CSPR
+    And Owner has 0 CSPR
+    When Alice stakes 1000 CSPR
+    And 2 auction passes
+    Then 1000.000099999 CSPR is staked
+    And Owner has 0 sCSPR
+    When Owner removes Validator1
+    And Owner adds Validator2
+    Then Owner has 0.000009998 sCSPR
+    And Alice has 1000 sCSPR
+    And 1000.000099999 CSPR is staked
+    When unbonding period passes
+    And Owner restakes loose tokens
+    And Alice unstakes everything
+    And unbonding period passes
+    And Alice claims unstakes
+    Then Alice has roughly 1000.00019 CSPR
+    And Owner has 0.000009998 sCSPR
+    When Owner unstakes everything
+    And unbonding period passes
+    And Owner claims unstakes
+    Then Owner has 0.000009999 CSPR
+    And 0 CSPR is staked
+    And 0 sCSPR is in the pool
+
+  Scenario: Validator withdraws its bid
+    Given Alice has 1000 CSPR
+    And Alice stakes 1000 CSPR
+    Then 1000 CSPR is staked
+    And Alice has 1000 sCSPR
+    When Validator1 withdraws its bid
+    Then 0 CSPR is staked
+    And 0 CSPR is loose
+    When Owner adds Validator2
+    And Owner removes Validator1
+    And 10 auction passes
+    Then 1000 CSPR is loose
+    And 0 CSPR is staked
+    When Owner restakes loose tokens
+    Then 1000 CSPR is really staked
+    And 1000 sCSPR is in the pool

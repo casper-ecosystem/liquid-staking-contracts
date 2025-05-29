@@ -1,4 +1,4 @@
-use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRInitArgs, MIN_STAKE};
+use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRInitArgs};
 use odra::{
     casper_types::{bytesrepr::FromBytes, PublicKey, U512},
     host::{Deployer, HostEnv},
@@ -13,6 +13,7 @@ pub fn validator() -> PublicKey {
 }
 
 const ONE_HOUR: u64 = 60 * 60 * 1000;
+const NET_MIN_STAKE: u128 = 500_000_000_000;
 
 pub struct DeployScript;
 impl odra_cli::deploy::DeployScript for DeployScript {
@@ -28,7 +29,7 @@ impl odra_cli::deploy::DeployScript for DeployScript {
                 validator_address: validator(),
                 claim_time: 2 * ONE_HOUR * 8,
                 fee_percentage: 1000.into(),
-                min_stake: U512::from(MIN_STAKE),
+                min_stake: U512::from(NET_MIN_STAKE),
             },
         )?;
         container.add_contract(&token)?;

@@ -8,14 +8,15 @@ use odra::{
     prelude::*,
     uints::{ToU256, ToU512},
 };
+use odra_modules::access::Ownable2Step;
+use odra_modules::security::Pauseable;
 use odra_modules::{
-    access::Ownable,
     cep18::{errors::Error as Cep18Error, utils::Cep18Modality},
     cep18_token::Cep18,
 };
 
-pub const MIN_STAKE: u128 = 500_000_000_000;
 pub const BENEFICIAL_VALIDATORS_COUNT: usize = 3;
+pub const MAX_FEE_PERCENTAGE: u32 = 10000;
 
 /// Error enum for the StakedCSPR contract
 #[odra::odra_error]
@@ -44,6 +45,16 @@ pub enum Error {
     ArithmeticsError = 61411,
     /// Action not allowed
     ActionNotAllowed = 61412,
+    /// Fee percentage is above the maximum
+    InvalidFeePercentage = 61413,
+    /// The validator exists in the list of validators
+    ValidatorAlreadyExists = 61414,
+    /// The min stake is zero
+    InvalidMinStake = 61415,
+    /// No backing for redemption
+    NoBackingForRedemption = 61416,
+    /// The amount of sCSPR to unstake is zero
+    InvalidUnstakeAmount = 61417,
 }
 
 /// UnstakingInfo struct
@@ -70,7 +81,9 @@ struct UnstakingInfo {
 )]
 pub struct StakedCSPR {
     /// Ownable module
-    ownable: SubModule<Ownable>,
+    ownable: SubModule<Ownable2Step>,
+    /// Pauseable module
+    pauseable: SubModule<Pauseable>,
     /// Token module
     token: SubModule<Cep18>,
     /// Unstake ids for each user
@@ -90,6 +103,8 @@ pub struct StakedCSPR {
     fee_percentage: Var<U512>,
     /// Minimum amount of CSPR that can be staked
     min_stake: Var<U512>,
+    /// The amount of CSPR that was staked in removed validator
+    removed_validator_stake: Var<U512>,
 }
 
 #[odra::module]
@@ -102,15 +117,12 @@ impl StakedCSPR {
             fn total_supply(&self) -> U256;
             fn balance_of(&self, account: &Address) -> U256;
             fn allowance(&self, owner: &Address, spender: &Address) -> U256;
-            fn transfer(&mut self, recipient: &Address, amount: &U256);
-            fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256);
-            fn approve(&mut self, spender: &Address, amount: &U256);
-            fn decrease_allowance(&mut self, spender: &Address, decr_by: &U256);
-            fn increase_allowance(&mut self, spender: &Address, inc_by: &U256);
         }
 
         to self.ownable {
             fn get_owner(&self) -> Address;
+            fn transfer_ownership(&mut self, new_owner: &Address);
+            fn accept_ownership(&mut self);
         }
     }
 
@@ -121,6 +133,16 @@ impl StakedCSPR {
         fee_percentage: U512,
         min_stake: U512,
     ) {
+        // Check if the fee percentage is above the maximum
+        if fee_percentage > MAX_FEE_PERCENTAGE.into() {
+            self.revert(InvalidFeePercentage);
+        }
+
+        // Check if the min stake is above the minimum
+        if min_stake == U512::zero() {
+            self.revert(InvalidMinStake);
+        }
+
         let admin = self.env().caller();
 
         // Grant the admin role
@@ -176,6 +198,8 @@ impl StakedCSPR {
     /// This function is payable, the attached value is the amount of CSPR to stake
     #[odra(payable)]
     pub fn stake(&mut self) {
+        self.pauseable.require_not_paused();
+
         let caller = self.env().caller();
         let cspr_amount = self.env().attached_value();
 
@@ -206,6 +230,12 @@ impl StakedCSPR {
     ///
     /// * `scspr_amount` - The amount of sCSPR to unstake
     pub fn unstake(&mut self, scspr_amount: U256) {
+        self.pauseable.require_not_paused();
+
+        if scspr_amount == U256::zero() {
+            self.env().revert(InvalidUnstakeAmount);
+        }
+
         self.collect_fee(self.staked_cspr());
         let block_time = self.env().get_block_time();
 
@@ -230,11 +260,13 @@ impl StakedCSPR {
         let new_unstake_id = self.unstakes.len();
         account_unstake_ids.push(new_unstake_id);
 
+        let next_claim_time = self.next_claim_time(block_time);
+
         self.unstakes.push(UnstakingInfo {
             unstake_id: new_unstake_id,
             owner: caller,
             cspr_amount,
-            claimable_from: self.next_claim_time(block_time),
+            claimable_from: next_claim_time,
             claimed: false,
         });
 
@@ -247,7 +279,7 @@ impl StakedCSPR {
             cspr_amount,
             scspr_burned: scspr_amount,
             unstake_id: new_unstake_id,
-            claim_time: self.next_claim_time(block_time),
+            claim_time: next_claim_time,
         });
 
         self.last_recorded_delegated_amount.set(self.staked_cspr());
@@ -256,6 +288,8 @@ impl StakedCSPR {
     /// Claims unstaked CSPR
     /// It checks all claims that are claimable and claims them for the caller
     pub fn claim(&mut self) {
+        self.pauseable.require_not_paused();
+
         let caller = self.env().caller();
         let mut unstake_ids = self.unstake_ids.get_or_default(&self.env().caller());
         let mut indices_to_remove = Vec::new();
@@ -319,10 +353,10 @@ impl StakedCSPR {
             self.env().revert(MisconfiguredValidator);
         }
 
-        // Sum up delegations from all validators
+        // Sum up delegations from all validators and add currently removed validator stake
         validators.iter().fold(U512::zero(), |acc, validator| {
             acc + self.env().delegated_amount(validator.clone())
-        })
+        }) + self.removed_validator_stake.get_or_default()
     }
 
     /// Returns the minimum stake
@@ -334,70 +368,6 @@ impl StakedCSPR {
     pub fn set_min_stake(&mut self, min_stake: U512) {
         self.ownable.assert_owner(&self.env().caller());
         self.min_stake.set(min_stake);
-    }
-
-    /// Adds CSPR to the pool
-    /// This function is payable, the attached value is the amount of CSPR to add to the pool
-    #[odra(payable)]
-    pub fn add_to_the_pool(&mut self) {
-        let attached_value = self.env().attached_value();
-        self.assert_min_stake(attached_value);
-        let staked_cspr = self.staked_cspr();
-        self.collect_fee(staked_cspr);
-
-        // Get random validators and verify that we have at least one
-        let validators = self.get_random_validators(1);
-        if validators.is_empty() {
-            self.env().revert(MisconfiguredValidator);
-        }
-
-        self.delegate(validators[0].clone(), self.env().attached_value());
-
-        // Emit event for adding CSPR to the pool
-        self.env().emit_event(CsprAddedToPool {
-            amount: attached_value,
-        });
-
-        self.last_recorded_delegated_amount
-            .set(staked_cspr + attached_value);
-    }
-
-    /// Removes CSPR from the pool
-    pub fn remove_from_the_pool(&mut self, amount: U512) {
-        self.ownable.assert_owner(&self.env().caller());
-        let staked_cspr = self.staked_cspr();
-        self.collect_fee(staked_cspr);
-        let actual_unstaked = self.undelegate_from_validators(amount);
-
-        // If we couldn't undelegate the full amount, revert
-        if actual_unstaked < amount {
-            self.env().revert(InsufficientBalance);
-        }
-
-        // Emit event for removing CSPR from the pool
-        self.env().emit_event(CsprRemovedFromPool {
-            amount: actual_unstaked,
-        });
-
-        self.last_recorded_delegated_amount
-            .set(staked_cspr - amount);
-    }
-
-    /// Withdraws CSPR from the contract
-    pub fn withdraw_from_the_contract(&mut self, amount: U512) {
-        let caller = self.env().caller();
-        self.ownable.assert_owner(&caller);
-
-        // Only allow withdrawing loose tokens
-        if amount > self.get_loose_tokens() {
-            self.env().revert(InsufficientBalance);
-        }
-
-        self.env().transfer_tokens(&self.env().caller(), &amount);
-        self.env().emit_event(CsprWithdrawnFromContract {
-            amount,
-            recipient: caller,
-        });
     }
 
     /// Adds a validator to the list of validators
@@ -415,15 +385,20 @@ impl StakedCSPR {
             self.env().emit_event(ValidatorAdded {
                 validator: public_key,
             });
+        } else {
+            self.env().revert(ValidatorAlreadyExists);
         }
     }
 
     /// Removes a validator from the list of validators
     pub fn remove_validator(&mut self, public_key: PublicKey) {
         self.ownable.assert_owner(&self.env().caller());
+        let staked_cspr = self.staked_cspr();
+        self.collect_fee(staked_cspr);
 
         let mut validators = self.validators.get_or_default();
         let mut removed = false;
+        let mut total_unstaked = U512::zero();
 
         // Find the position of the validator in the list
         if let Some(position) = validators.iter().position(|v| v == &public_key) {
@@ -440,8 +415,10 @@ impl StakedCSPR {
             let cspr_amount = self.env().delegated_amount(public_key.clone());
             if cspr_amount > U512::zero() {
                 self.undelegate(public_key, cspr_amount);
+                total_unstaked = total_unstaked
+                    .checked_add(cspr_amount)
+                    .unwrap_or_revert_with(self, TotalUnstakesOverflow);
             }
-
             removed = true;
         }
 
@@ -449,6 +426,25 @@ impl StakedCSPR {
         if !removed {
             self.env().revert(ValidatorNotInList);
         }
+
+        // Track last recorded delegated amount
+        self.last_recorded_delegated_amount
+            .set(staked_cspr.saturating_sub(total_unstaked));
+
+        // Track removed validator stake
+        self.removed_validator_stake.set(
+            self.removed_validator_stake
+                .get_or_default()
+                .saturating_add(total_unstaked),
+        );
+    }
+
+    /// Adds loose tokens to the contract
+    /// This function is payable, the attached value is the amount of CSPR to add
+    /// to the contract, without staking it.
+    #[odra(payable)]
+    pub fn add_loose_tokens(&self) {
+        self.ownable.assert_owner(&self.env().caller());
     }
 
     /// Restakes loose tokens
@@ -456,11 +452,11 @@ impl StakedCSPR {
     /// or claimable) and delegates it to 3 random validators, equally divided
     pub fn restake_loose_tokens(&mut self) {
         self.ownable.assert_owner(&self.env().caller());
-        let min_stake = self.min_stake.get_or_default();
+        let min_stake = self.get_min_stake();
         let loose_tokens = self.get_loose_tokens();
 
         if loose_tokens < min_stake {
-            self.env().revert(InsufficientBalance);
+            self.env().revert(StakeBelowMinimum);
         }
 
         let validators_count = if loose_tokens < min_stake * BENEFICIAL_VALIDATORS_COUNT {
@@ -471,9 +467,20 @@ impl StakedCSPR {
 
         let validators = self.get_random_validators(validators_count);
         let amount_to_delegate = loose_tokens / validators.len();
+
+        let mut delegated_amount = U512::zero();
         for validator in validators.iter() {
             self.delegate(validator.clone(), amount_to_delegate);
+            delegated_amount += amount_to_delegate;
         }
+
+        // Reduce the removed validator stake by the again delegated amount
+        let removed_validator_stake = self.removed_validator_stake.get_or_default();
+        if !removed_validator_stake.is_zero() {
+            self.removed_validator_stake
+                .set(removed_validator_stake.saturating_sub(delegated_amount));
+        }
+
         self.last_recorded_delegated_amount.set(self.staked_cspr());
     }
 
@@ -509,6 +516,83 @@ impl StakedCSPR {
             .self_balance()
             .saturating_sub(self.total_unstakes.get_or_default())
     }
+
+    /// Returns the claim time
+    pub fn get_claim_time(&self) -> u64 {
+        self.claim_time.get_or_default()
+    }
+
+    /// Sets the claim time
+    pub fn set_claim_time(&mut self, claim_time: u64) {
+        self.ownable.assert_owner(&self.env().caller());
+        self.claim_time.set(claim_time);
+    }
+
+    /// Returns the fee_percentage
+    pub fn get_fee_percentage(&self) -> U512 {
+        self.fee_percentage.get_or_default()
+    }
+
+    /// Sets the fee_percentage
+    pub fn set_fee_percentage(&mut self, fee_percentage: U512) {
+        self.ownable.assert_owner(&self.env().caller());
+        if fee_percentage > MAX_FEE_PERCENTAGE.into() {
+            self.env().revert(InvalidFeePercentage);
+        }
+        self.fee_percentage.set(fee_percentage);
+    }
+
+    /// Pauses the contract
+    pub fn pause(&mut self) {
+        self.ownable.assert_owner(&self.env().caller());
+        self.pauseable.pause();
+    }
+
+    /// Unpauses the contract
+    pub fn unpause(&mut self) {
+        self.ownable.assert_owner(&self.env().caller());
+        self.pauseable.unpause();
+    }
+
+    /// Returns whether the contract is paused
+    pub fn is_paused(&self) -> bool {
+        self.pauseable.is_paused()
+    }
+
+    /// Transfers tokens from the caller to the recipient.
+    pub fn transfer(&mut self, recipient: &Address, amount: &U256) {
+        self.pauseable.require_not_paused();
+        self.token.transfer(recipient, amount);
+    }
+
+    /// Transfers tokens from the owner to the recipient using the spender's allowance.
+    pub fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
+        self.pauseable.require_not_paused();
+        self.token.transfer_from(owner, recipient, amount);
+    }
+
+    /// Approves the spender to spend the given amount of tokens on behalf of the caller.
+    pub fn approve(&mut self, spender: &Address, amount: &U256) {
+        self.pauseable.require_not_paused();
+        self.token.approve(spender, amount);
+    }
+
+    /// Decreases the allowance of the spender by the given amount.
+    pub fn decrease_allowance(&mut self, spender: &Address, decr_by: &U256) {
+        self.pauseable.require_not_paused();
+        self.token.decrease_allowance(spender, decr_by);
+    }
+
+    /// Increases the allowance of the spender by the given amount.
+    pub fn increase_allowance(&mut self, spender: &Address, inc_by: &U256) {
+        self.pauseable.require_not_paused();
+        self.token.increase_allowance(spender, inc_by);
+    }
+
+    /// Returns the amount of stake that was removed from the contract
+    pub fn removed_validator_stake(&self) -> U512 {
+        self.removed_validator_stake.get_or_default()
+    }
 }
 
 impl StakedCSPR {
@@ -531,8 +615,7 @@ impl StakedCSPR {
     }
 
     fn next_claim_time(&self, block_time: u64) -> u64 {
-        let claim_time = self.claim_time.get_or_default();
-        block_time + claim_time
+        block_time + self.get_claim_time()
     }
 
     fn cspr_to_scspr(&self, cspr_stake: U512, staked_cspr: U512) -> U256 {
@@ -565,14 +648,14 @@ impl StakedCSPR {
         let scspr_total_supply = self.token.total_supply().to_u512();
 
         if scspr_total_supply.is_zero() {
-            return scspr.to_u512();
+            self.env().revert(NoBackingForRedemption);
         }
 
         let staked_cspr = self.staked_cspr();
 
         // If there's no staked CSPR, conversion would be 1:1
         if staked_cspr.is_zero() {
-            return scspr.to_u512();
+            self.env().revert(NoBackingForRedemption);
         }
 
         // Calculate CSPR amount using the formula: scspr * staked_cspr / scspr_total_supply
@@ -654,6 +737,11 @@ impl StakedCSPR {
         selected_indices
     }
 
+    // Extract u32 from 4 bytes at specified offset
+    fn extract_u32_from_bytes(&self, bytes: &[u8]) -> usize {
+        u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize
+    }
+
     fn get_random_validators(&self, amount: usize) -> Vec<PublicKey> {
         let validators = self.validators.get_or_revert_with(MisconfiguredValidator);
 
@@ -661,14 +749,12 @@ impl StakedCSPR {
             self.env().revert(MisconfiguredValidator);
         }
 
-        // Just get a single random index
-        // It uses the block time as a seed, so it's deterministic
-        // But it is sufficient for our purposes
-        let indices = self.get_random_validator_indices(
-            amount,
-            validators.len(),
-            self.env().get_block_time() as usize,
-        );
+        // Use pseudorandom_bytes(32) to get a seed value
+        let random_bytes = self.env().pseudorandom_bytes(4);
+        // Use first 4 bytes as seed by interpreting them as a u32
+        let seed = self.extract_u32_from_bytes(&random_bytes);
+
+        let indices = self.get_random_validator_indices(amount, validators.len(), seed);
 
         indices.iter().map(|i| validators[*i].clone()).collect()
     }
@@ -681,12 +767,13 @@ impl StakedCSPR {
             self.env().revert(MisconfiguredValidator);
         }
 
+        // Use pseudorandom_bytes(32) to get a random index - reuse the same random bytes for multiple purposes
+        let random_bytes = self.env().pseudorandom_bytes(4);
+        // Use bytes at offset 4 as seed by interpreting them as a u32
+        let seed = self.extract_u32_from_bytes(&random_bytes);
+
         // Start from a random index
-        let start_idx = self.get_random_validator_indices(
-            1,
-            validators.len(),
-            self.env().get_block_time() as usize,
-        )[0];
+        let start_idx = self.get_random_validator_indices(1, validators.len(), seed)[0];
         let len = validators.len();
 
         // Try each validator starting from the random index, wrapping around
@@ -717,8 +804,7 @@ impl StakedCSPR {
     }
 
     fn assert_min_stake(&self, stake: U512) {
-        let min_stake = self.min_stake.get_or_default();
-        if stake < min_stake {
+        if stake < self.get_min_stake() {
             self.env().revert(StakeBelowMinimum);
         }
     }
@@ -726,6 +812,9 @@ impl StakedCSPR {
 
 #[cfg(test)]
 mod tests {
+
+    const MIN_STAKE: u128 = 500_000_000_000;
+
     // Add this at the beginning of the tests module
     #[cfg(test)]
     mod state_writer {

@@ -54,3 +54,15 @@ harness = false
 [[test]]
 name = "test_bugs"
 harness = false
+
+[[test]]
+name = "test_audit"
+harness = false
+
+[[test]]
+name = "test_configuration"
+harness = false
+
+[[test]]
+name = "test_pauseable"
+harness = false
