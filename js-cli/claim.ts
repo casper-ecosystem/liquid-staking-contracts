@@ -33,9 +33,7 @@ const claim = async () => {
 
     const sender = await getSenderKey(options.owner_keys_path, options.keys_algo);
 
-    const args = Args.fromMap({
-        unstake_id: CLValue.newCLUInt32(options.unstake_id),
-    });
+    const args = Args.fromMap({});
 
     const transaction = new ContractCallBuilder()
         .from(sender.publicKey)
