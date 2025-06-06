@@ -10,10 +10,7 @@ use odra::{
 };
 use odra_modules::access::Ownable2Step;
 use odra_modules::security::Pauseable;
-use odra_modules::{
-    cep18::{errors::Error as Cep18Error, utils::Cep18Modality},
-    cep18_token::Cep18,
-};
+use odra_modules::{cep18::errors::Error as Cep18Error, cep18_token::Cep18};
 
 pub const BENEFICIAL_VALIDATORS_COUNT: usize = 3;
 pub const MAX_FEE_PERCENTAGE: u32 = 10000;
@@ -158,40 +155,11 @@ impl StakedCSPR {
             String::from("Staked CSPR"),
             9,
             U256::zero(),
-            vec![],
-            vec![],
-            Some(Cep18Modality::None),
         );
 
         self.fee_percentage.set(fee_percentage);
         self.last_recorded_delegated_amount.set(U512::zero());
         self.min_stake.set(min_stake);
-    }
-
-    /// We override the default implementation of the change_security function
-    /// to be compatible with the cep18 token, but we don't allow any changes
-    #[allow(unused_variables)]
-    pub fn change_security(
-        &mut self,
-        admin_list: Vec<Address>,
-        minter_list: Vec<Address>,
-        none_list: Vec<Address>,
-    ) {
-        self.revert(ActionNotAllowed);
-    }
-
-    /// We override the default implementation of the mint function
-    /// to be compatible with the cep18 token, but we don't allow any minting
-    #[allow(unused_variables)]
-    pub fn mint(&mut self, owner: &Address, amount: &U256) {
-        self.revert(ActionNotAllowed);
-    }
-
-    /// We override the default implementation of the burn function
-    /// to be compatible with the cep18 token, but we don't allow any burning
-    #[allow(unused_variables)]
-    pub fn burn(&mut self, owner: &Address, amount: &U256) {
-        self.revert(ActionNotAllowed);
     }
 
     /// Stakes CSPR
