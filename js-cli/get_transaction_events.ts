@@ -8,8 +8,8 @@ const {program} = require('commander');
 
 program
     .option('--node_url [value]', 'node URL in format {http://localhost:11101/rpc}', 'http://localhost:11101/rpc')
-    .option('--contract_hash [value]', 'staking contract address')
-    .option('--transaction_hash [value]', 'unstake transaction hash')
+    .requiredOption('--contract_hash [value]', 'staking contract address')
+    .requiredOption('--transaction_hash [value]', 'unstake transaction hash')
 
 program.parse();
 

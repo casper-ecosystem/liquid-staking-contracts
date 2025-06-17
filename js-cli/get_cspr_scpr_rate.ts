@@ -30,7 +30,7 @@ export async function getSCSPRTotalSupply(rpcClient: RpcClient, contract_hash: s
     return totalSupply.storedValue.clValue.ui256.getValue();
 }
 
-const get_validators = async () => {
+const get_cspr_scpr_rate = async () => {
 
     const rpcHandler = new HttpHandler(options.node_url);
     const rpcClient = new RpcClient(rpcHandler);
@@ -69,4 +69,4 @@ const get_validators = async () => {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
-get_validators();
+get_cspr_scpr_rate();

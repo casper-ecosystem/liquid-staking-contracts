@@ -20,7 +20,7 @@ program
     .option('--keys_algo [value]', 'Crypto algo ed25519 | secp256K1', 'ed25519')
     .requiredOption('--contract_package_hash [value]', 'staking contract package address')
     .requiredOption('--amount [value]', 'amount to unstake')
-    .option('--paymentAmount [value]', 'motes to cover gas costs', '12000000000');
+    .option('--payment_amount [value]', 'motes to cover gas costs', '12000000000');
 
 program.parse();
 
@@ -39,7 +39,7 @@ const unstake = async () => {
         .byPackageHash(options.contract_package_hash)
         .entryPoint('unstake')
         .runtimeArgs(args)
-        .payment(Number.parseInt(options.paymentAmount, 10)) // Amount in motes
+        .payment(Number.parseInt(options.payment_amount, 10)) // Amount in motes
         .chainName(options.network_name)
         .build();
 

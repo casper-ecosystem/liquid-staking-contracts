@@ -21,7 +21,7 @@ program
     .option('--proxy_caller [value]', 'proxy caller wasm file', './proxy_caller.wasm')
     .requiredOption('--contract_package_hash [value]', 'staking contract address')
     .requiredOption('--amount [value]', 'amount to unstake (in motes)')
-    .option('--paymentAmount [value]', 'motes to cover gas costs', '12000000000');
+    .option('--payment_amount [value]', 'motes to cover gas costs', '12000000000');
 
 program.parse();
 
@@ -50,7 +50,7 @@ const stake = async () => {
         .from(owner.publicKey)
         .runtimeArgs(args)
         .wasm(new Uint8Array(contractWasm))
-        .payment(Number.parseInt(options.paymentAmount, 10)) // Amount in motes
+        .payment(Number.parseInt(options.payment_amount, 10)) // Amount in motes
         .chainName(options.network_name)
         .build();
 

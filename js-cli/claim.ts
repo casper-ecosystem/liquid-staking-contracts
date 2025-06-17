@@ -14,7 +14,7 @@ program
     .requiredOption('--owner_keys_path [value]', 'path to contract owners keys')
     .option('--keys_algo [value]', 'Crypto algo ed25519 | secp256K1', 'ed25519')
     .requiredOption('--contract_package_hash [value]', 'staking contract package address')
-    .option('--paymentAmount [value]', 'motes to cover gas costs', '12000000000');
+    .option('--payment_amount [value]', 'motes to cover gas costs', '12000000000');
 
 program.parse();
 
@@ -31,7 +31,7 @@ const claim = async () => {
         .byPackageHash(options.contract_package_hash)
         .entryPoint('claim')
         .runtimeArgs(args)
-        .payment(Number.parseInt(options.paymentAmount, 10)) // Amount in motes
+        .payment(Number.parseInt(options.payment_amount, 10)) // Amount in motes
         .chainName(options.network_name)
         .build();
 

@@ -123,10 +123,10 @@ const get_address_claims = async () => {
         const unstakeInfoResult = await getUnstakeInfoDictionaryItemKey(rpcClient, options.contract_hash, unstakeId);
 
         console.log("unstake id", unstakeInfoResult.id.ui32.toNumber());
-        console.log("unstake owner", unstakeInfoResult.owner.key.account.toHex());
-        console.log("unstake amount", unstakeInfoResult.amount.ui512.toNumber());
-        console.log("unstake claimTime", unstakeInfoResult.claimTime.ui64.toNumber());
-        console.log("unstake isClaimed", unstakeInfoResult.isClaimed.bool.getValue());
+        console.log("  owner", unstakeInfoResult.owner.key.account.toHex());
+        console.log("  amount", unstakeInfoResult.amount.ui512.toNumber());
+        console.log("  claimTime", unstakeInfoResult.claimTime.ui64.toNumber());
+        console.log("  isClaimed", unstakeInfoResult.isClaimed.bool.getValue());
     }
 };
 

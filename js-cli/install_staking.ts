@@ -20,7 +20,9 @@ program
     .option('--keys_algo [value]', 'Crypto algo ed25519 | secp256K1', 'ed25519')
     .option('--wasm [value]', 'path to LS contract wasm file')
     .requiredOption('--validator [value]', 'validator public key')
-    .option('--paymentAmount [value]', 'motes to cover gas costs', '600000000000');
+    .option('--fee_percentage [value]', 'fee percentage with 2 decimals', '1000')
+    .option('--min_stake [value]', 'minimum stake amount', '500000000000')
+    .option('--payment_amount [value]', 'motes to cover gas costs', '600000000000');
 
 program.parse();
 
@@ -37,6 +39,8 @@ const install = async () => {
             odra_cfg_package_hash_key_name: CLValue.newCLString("StakedCSPR_package_hash"),
             validator_address: CLValue.newCLPublicKey(PublicKey.fromHex(options.validator)),
             claim_time: CLValue.newCLUint64(7*60*60),
+            fee_percentage: CLValue.newCLUInt512(options.fee_percentage),
+            min_stake: CLValue.newCLUInt512(options.min_stake),
         });
 
     const sessionTransaction = new SessionBuilder()
@@ -44,7 +48,7 @@ const install = async () => {
         .installOrUpgrade()
         .runtimeArgs(args)
         .wasm(new Uint8Array(contractWasm))
-        .payment(options.paymentAmount) // Amount in motes
+        .payment(Number.parseInt(options.payment_amount, 10)) // Amount in motes
         .chainName(options.network_name)
         .build();
     await sessionTransaction.sign(owner);
