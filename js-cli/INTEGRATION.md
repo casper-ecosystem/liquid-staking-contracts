@@ -151,6 +151,32 @@ Event:
     claim_time: 1749211477154
 ```
 
+### Get Address Claims
+
+To get the list of pending claims for an address, use the `get_address_claims` script:
+
+```bash
+npm run scripts:get_address_claims -- \
+  --node_url https://node.testnet.casper.network/rpc \
+  --contract_hash <contract_hash> \
+  --account_hash <account_hash>
+```
+
+Example output:
+
+```
+unstake id 1
+  owner 56befc13a6fd62e18f361700a5e08f966901c34df8041b36ec97d54d605c23de
+  amount 93360834346
+  claimTime 1750168532856
+  isClaimed false
+unstake id 2
+  owner 56befc13a6fd62e18f361700a5e08f966901c34df8041b36ec97d54d605c23de
+  amount 182873326928
+  claimTime 1750168542439
+  isClaimed false
+```
+
 ### Claim CSPR
 
 To withdraw the CSPR, use the `claim` script:
@@ -187,7 +213,32 @@ Event:
     unstake_id: 29
 ```
 
-## Estimating the sCSPR/CSPR rate
+## Recovering the sCSPR/CSPR rate
+
+The CSPR/sCSPR rate, is calculated by dividing the total supply of `sCSPR` by the total amount of CSPR staked.
+
+The `get_cspr_scpr_rate` script can be used to retrieve the rate:
+
+```bash
+npm run scripts:get_cspr_scpr_rate -- \
+  --node_url https://node.testnet.casper.network/rpc \
+  --contract_hash <stakedcspr_contract_hash>
+```
+
+Example output:
+
+```
+Contract main purse: uref-3d6f794d6da1e3d0a574753310e92544644658c6d1d33a5cee0c133811aedbb5-007
+Validator: 01f58b94526d280881f79744effebc555426190950d5dfdd2f8aaf10ceaec010c6
+  Bonding purse: https://testnet.cspr.live/uref/uref-0aa2459444f442a4341d7cbcbb6004d23a74a069c342a5ed63072d7da3ea24d0-007
+  Staked amount: 3661538066380
+Total CSPR staked: 3661538066380
+Total sCSPR supply: 2237515546974
+CSPR/sCSPR rate: 1.636430223393012
+
+```
+
+## Estimating the sCSPR/CSPR rate (manual alternative)
 
 The CSPR/sCSPR rate, is calculated by dividing the total supply of `sCSPR` by the total amount of CSPR staked.
 
