@@ -8,33 +8,27 @@ import {
     RpcClient,
     SessionBuilder
 } from "casper-js-sdk";
-import * as fs from 'fs/promises';
+import {getSenderKey} from "./utils";
+import fs from "fs/promises";
 
 const {program} = require('commander');
 
 program
-    .option('--wasm [value]', 'path to LS contract wasm file')
-    .option('--owner_keys_path [value]', 'path to contract owners keys')
-    .option('--keys_algo [value]', 'Crypto algo ed25519 | secp256K1', 'ed25519')
     .option('--node_url [value]', 'node URL in format {http://localhost:11101/rpc}', 'http://localhost:11101/rpc')
     .option('--network_name [value]', 'network_name', 'casper-net-1')
-    .option('--validator [value]', 'validator public key')
+    .requiredOption('--owner_keys_path [value]', 'path to contract owners keys')
+    .option('--keys_algo [value]', 'Crypto algo ed25519 | secp256K1', 'ed25519')
+    .option('--wasm [value]', 'path to LS contract wasm file')
+    .requiredOption('--validator [value]', 'validator public key')
+    .option('--paymentAmount [value]', 'motes to cover gas costs', '600000000000');
 
 program.parse();
 
 const options = program.opts();
 
-export const getSenderKey = async (filePath: string) => {
-    const pem = await fs.readFile(filePath);
-    return PrivateKey.fromPem(pem.toString(),
-        KeyAlgorithm.ED25519
-    );
-}
-
 const install = async () => {
 
-    const paymentAmount = 600_000_000_000;
-    const owner = await getSenderKey(options.owner_keys_path);
+    const owner = await getSenderKey(options.owner_keys_path, options.keys_algo);
     const contractWasm = await fs.readFile(options.wasm);
 
     const args = Args.fromMap({
@@ -50,7 +44,7 @@ const install = async () => {
         .installOrUpgrade()
         .runtimeArgs(args)
         .wasm(new Uint8Array(contractWasm))
-        .payment(paymentAmount) // Amount in motes
+        .payment(options.paymentAmount) // Amount in motes
         .chainName(options.network_name)
         .build();
     await sessionTransaction.sign(owner);
@@ -63,3 +57,4 @@ const install = async () => {
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 install();
+

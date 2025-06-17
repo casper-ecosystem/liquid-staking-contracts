@@ -1,33 +1,24 @@
 import {
     Args,
     HttpHandler,
-    KeyAlgorithm,
-    PrivateKey,
     RpcClient,
     ContractCallBuilder,
-    CLValue
 } from "casper-js-sdk";
-import * as fs from 'fs/promises';
+import {getSenderKey} from "./utils";
 
 const {program} = require('commander');
 
 program
-    .option('--owner_keys_path [value]', 'path to contract owners keys')
-    .option('--keys_algo [value]', 'Crypto algo ed25519 | secp256K1', 'ed25519')
     .option('--node_url [value]', 'node URL in format {http://localhost:11101/rpc}', 'http://localhost:11101/rpc')
     .option('--network_name [value]', 'network_name', 'casper-net-1')
-    .option('--contract_package_hash [value]', 'staking contract package address')
-    .option('--paymentAmount [value]', 'motes to cover gas costs', '12000000000')
+    .requiredOption('--owner_keys_path [value]', 'path to contract owners keys')
+    .option('--keys_algo [value]', 'Crypto algo ed25519 | secp256K1', 'ed25519')
+    .requiredOption('--contract_package_hash [value]', 'staking contract package address')
+    .option('--paymentAmount [value]', 'motes to cover gas costs', '12000000000');
 
 program.parse();
 
 const options = program.opts();
-
-export const getSenderKey = async (filePath: string, algo: string) => {
-    const pem = await fs.readFile(filePath);
-    const keyAlgo = algo == 'ed25519' ? KeyAlgorithm.ED25519 : KeyAlgorithm.SECP256K1;
-    return PrivateKey.fromPem(pem.toString(), keyAlgo);
-}
 
 const claim = async () => {
 
@@ -44,7 +35,7 @@ const claim = async () => {
         .chainName(options.network_name)
         .build();
 
-    await transaction.sign(sender);
+    transaction.sign(sender);
     const rpcHandler = new HttpHandler(options.node_url);
     const rpcClient = new RpcClient(rpcHandler);
     const result = await rpcClient.putTransaction(transaction);
