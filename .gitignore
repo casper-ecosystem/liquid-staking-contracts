@@ -9,3 +9,4 @@ Cargo.lock
 liquid-staking-contracts/wasm
 **/.DS_Store
 .env*
+node_modules/
