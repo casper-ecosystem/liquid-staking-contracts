@@ -11,3 +11,25 @@ Feature: Bug fixes and edge cases
     And Alice claims unstakes
     Then Alice has 900 CSPR
     And Alice's token balance is 100 sCSPR 
+
+  Scenario: Unstaking very small amount
+    # Initial condition.
+    Given Alice has 500 CSPR
+    When Alice stakes 500 CSPR
+    Then Alice has 500 sCSPR
+    
+    # First Alice unstakes a very small amount.
+    When Alice unstakes 0.000000001 sCSPR
+    And unbonding period passes
+    And Alice claims unstakes
+    Then Alice has 0.000000001 CSPR
+    And Alice's token balance is 499.999999999 sCSPR
+    And the contract has 0 CSPR
+
+    # Then Alice unstakes the rest.
+    When Alice unstakes 499.999999999 sCSPR
+    And unbonding period passes
+    And Alice claims unstakes
+    Then Alice has roughly 500.000 CSPR
+    And Alice's token balance is 0 sCSPR
+    And the contract has 0 CSPR

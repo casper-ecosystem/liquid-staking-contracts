@@ -1,9 +1,9 @@
 use crate::lst_world::{LSTWorld, StakedCSPRAmount};
 use cucumber::{given, then, when};
 use odra::host::HostRef;
-use odra::prelude::OdraError;
 use odra_bdd::types::account::Account;
 use odra_bdd::types::cspr::CSPRAmount;
+use liquid_staking_contracts::token;
 
 #[when(expr = "{account} stakes {cspr_amount} CSPR")]
 #[given(expr = "{account} stakes {cspr_amount} CSPR")]
@@ -57,6 +57,6 @@ fn cannot_unstake_because_no_backing(
 ) {
     world.env.set_caller(&account);
     let result = world.token.try_unstake(scspr.amount());
-    assert_eq!(result.err().unwrap(), OdraError::user(61416));
+    assert_eq!(result.err().unwrap(), token::Error::NoBackingForRedemption.into());
     world.update_pool_state("cannot_unstake_because_no_backing");
 }

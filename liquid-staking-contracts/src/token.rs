@@ -58,7 +58,7 @@ pub enum Error {
 /// It is used to store the unstaking information for each user
 /// as the unstaking needs to wait for the unbonding delay before it can be claimed
 #[odra::odra_type]
-struct UnstakingInfo {
+pub struct UnstakingInfo {
     /// The id of the unstake
     unstake_id: u32,
     /// The address of the owner of the unstake
@@ -560,6 +560,16 @@ impl StakedCSPR {
     /// Returns the amount of stake that was removed from the contract
     pub fn removed_validator_stake(&self) -> U512 {
         self.removed_validator_stake.get_or_default()
+    }
+
+    pub fn get_unstake_ids(&self, account: &Address) -> Vec<u32> {
+        self.unstake_ids.get_or_default(account)
+    }
+
+    pub fn get_unstake(&self, unstake_id: u32) -> UnstakingInfo {
+        self.unstakes
+            .get(unstake_id)
+            .unwrap_or_revert_with(self, UnstakeNotFound)
     }
 }
 

@@ -4,7 +4,7 @@ use crate::lst_world::{LSTWorld, StakedCSPRAmount};
 use cucumber::{given, then};
 use liquid_staking_contracts::events::Unstaked;
 use odra::casper_types::U512;
-use odra::Addressable;
+use odra::prelude::Addressable;
 use odra_bdd::types::account::Account;
 use odra_bdd::types::cspr::CSPRAmount;
 
@@ -45,7 +45,7 @@ fn check_more_than_scspr_balance(world: &mut LSTWorld, account: Account, scspr: 
 fn check_contract_cspr_balance(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
     assert_eq!(
         cspr_amount,
-        CSPRAmount::new(world.env.env().balance_of(world.token.address()), 9)
+        CSPRAmount::new(world.env.env().balance_of(&world.token.address()), 9)
     );
 }
 
@@ -73,7 +73,7 @@ fn check_really_staked_cspr(world: &mut LSTWorld, cspr_amount: CSPRAmount) {
         acc + world
             .env
             .env()
-            .delegated_amount(*world.token.address(), validator.clone())
+            .delegated_amount(world.token.address(), validator.clone())
     });
     assert_eq!(cspr_amount.amount(), total_stake);
 }
@@ -153,9 +153,9 @@ fn check_loose_tokens(world: &mut LSTWorld, cspr: CSPRAmount) {
 
     // Also the balance of the token should be greater than the total loose tokens
     assert!(
-        world.env.env().balance_of(world.token.address()) >= total_loose,
+        world.env.env().balance_of(&world.token.address()) >= total_loose,
         "Token balance ({}) is less than the total loose tokens ({})",
-        world.env.env().balance_of(world.token.address()),
+        world.env.env().balance_of(&world.token.address()),
         total_loose
     );
 }
@@ -208,7 +208,7 @@ fn check_unstake_event(world: &mut LSTWorld, account: Account, cspr_amount: CSPR
     let unstake_event: Unstaked = world
         .env
         .env()
-        .get_event(world.token.address(), -1)
+        .get_event(&world.token.address(), -1)
         .unwrap();
     assert_eq!(
         unstake_event.scspr_burned,
