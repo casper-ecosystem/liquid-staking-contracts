@@ -19,12 +19,14 @@ Feature: Bug fixes and edge cases
     Then Alice has 500 sCSPR
     
     # First Alice unstakes a very small amount.
-    When Alice unstakes 0.000000001 sCSPR
-    And unbonding period passes
-    And Alice claims unstakes
-    Then Alice has 0.000000001 CSPR
-    And Alice's token balance is 499.999999999 sCSPR
-    And the contract has 0 CSPR
+    When Alice unstakes 100 sCSPR
+    And 20 auction passes
+    Then 400 CSPR is staked
+    Then the contract has 500 CSPR
+    When Alice claims unstakes
+    Then Alice has 100 CSPR
+    And Alice's token balance is 400 sCSPR
+    And the contract has 400 CSPR
 
     # Then Alice unstakes the rest.
     When Alice unstakes 499.999999999 sCSPR

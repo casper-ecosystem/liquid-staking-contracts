@@ -213,5 +213,6 @@ fn assert_restake_loose_tokens_succeeds_when_paused(world: &mut LSTWorld) {
         .add_loose_tokens();
 
     let result = world.token.try_restake_loose_tokens();
+    dbg!(&result);
     assert!(result.is_ok());
 }
