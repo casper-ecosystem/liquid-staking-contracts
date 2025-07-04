@@ -2,9 +2,9 @@ Feature: Fix for HAL-001
 
   Scenario: Validator removal bypasses fee collection and breaks delegation tracking
     Given Alice has 1000 CSPR
-    And Owner has 0 CSPR
+    And Owner has 500 CSPR
     When Alice stakes 1000 CSPR
-    And 2 auction passes
+    And 1 auction passes
     Then 1000.000099999 CSPR is staked
     And Owner has 0 sCSPR
     When Owner removes Validator1
@@ -18,12 +18,20 @@ Feature: Fix for HAL-001
     And Alice unstakes everything
     And unbonding period passes
     And Alice claims unstakes
-    Then Alice has roughly 1000.00019 CSPR
+    Then Alice has roughly 1000 CSPR
     And Owner has 0.000009998 sCSPR
+    And 0.000009999 CSPR is staked
+    And 0.000009999 CSPR is loose
+    When Owner adds 500 CSPR to the pool
+    Then 500.000009999 CSPR is staked
+    And 0.000009998 sCSPR is in the pool
+    And 0 CSPR is loose
+
+    When 20 eras pass
     When Owner unstakes everything
     And unbonding period passes
     And Owner claims unstakes
-    Then Owner has 0.000009999 CSPR
+    Then Owner has 500.000009999 CSPR
     And 0 CSPR is staked
     And 0 sCSPR is in the pool
 
@@ -33,16 +41,16 @@ Feature: Fix for HAL-001
     And Bob has 1000 CSPR
     When Alice stakes 1000 CSPR
     And 10 auction passes
-    Then 1000.000899991 CSPR is staked
+    Then 1000.00099999 CSPR is staked
     When Owner adds Validator2
     When Owner removes Validator1
-    Then removed validator stake is 1000.000899991 CSPR
-    And 1000.000899991 CSPR is staked
+    Then removed validator stake is 1000.00099999 CSPR
+    And 1000.000999990 CSPR is staked
     Then Alice has 1000 sCSPR
     And Bob has 0 sCSPR
     When Bob stakes 1000 CSPR
     # Before the fix, Bob would have around 500 sCSPR instead
-    Then Bob has 999.999190007 sCSPR
+    Then Bob has 999.999100008 sCSPR
 
   Scenario: Counting removed validator stake during unstaking
     Given the contract is deployed with 1000 basis points fee

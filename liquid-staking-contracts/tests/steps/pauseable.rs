@@ -1,4 +1,4 @@
-use crate::lst_world::LSTWorld;
+use crate::lst_world::{LSTWorld, WORLD_MIN_STAKE};
 use cucumber::{then, when};
 use odra::casper_types::{U256, U512};
 use odra::host::HostRef;
@@ -209,10 +209,9 @@ fn assert_restake_loose_tokens_succeeds_when_paused(world: &mut LSTWorld) {
     // First add some loose tokens
     world
         .token
-        .with_tokens(world.token.get_min_stake())
+        .with_tokens(U512::from(WORLD_MIN_STAKE))
         .add_loose_tokens();
 
     let result = world.token.try_restake_loose_tokens();
-    dbg!(&result);
     assert!(result.is_ok());
 }

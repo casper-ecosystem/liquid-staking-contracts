@@ -382,7 +382,7 @@ impl StakedCSPR {
             // Unstake all the stake from the validator, but only if there is some stake
             let cspr_amount = self.env().delegated_amount(public_key.clone());
             if cspr_amount > U512::zero() {
-                self.undelegate(public_key, cspr_amount);
+                self.undelegate(public_key, cspr_amount, cspr_amount);
                 total_unstaked = total_unstaked
                     .checked_add(cspr_amount)
                     .unwrap_or_revert_with(self, TotalUnstakesOverflow);
@@ -583,7 +583,11 @@ impl StakedCSPR {
         });
     }
 
-    fn undelegate(&self, public_key: PublicKey, amount: U512) {
+    fn undelegate(&mut self, public_key: PublicKey, amount: U512, delegated_amount: U512) {
+        if delegated_amount - amount < self.get_min_stake() {
+            self.removed_validator_stake
+                .set(self.removed_validator_stake() + delegated_amount - amount);
+        }
         self.env().undelegate(public_key.clone(), amount);
         self.env().emit_event(Undelegated {
             address: self.env().caller(),
@@ -631,7 +635,7 @@ impl StakedCSPR {
 
         let staked_cspr = self.staked_cspr();
 
-        // If there's no staked CSPR, conversion would be 1:1
+        // If there's no staked CSPR, we cannot convert
         if staked_cspr.is_zero() {
             self.env().revert(NoBackingForRedemption);
         }
@@ -767,7 +771,7 @@ impl StakedCSPR {
                     delegated
                 };
 
-                self.undelegate(validator, amount_to_undelegate);
+                self.undelegate(validator, amount_to_undelegate, delegated);
                 remaining_amount = remaining_amount
                     .checked_sub(amount_to_undelegate)
                     .unwrap_or_revert_with(self, ArithmeticsError);
@@ -916,8 +920,8 @@ mod tests {
         env.set_caller(bob);
         token.with_tokens(deposit_amount_u512).stake();
 
-        // Then Admin has 998 sCSPR
-        assert_eq!(token.balance_of(&admin), U256::from(998u64));
+        // Then Admin has 1998 Motes
+        assert_eq!(token.balance_of(&admin), U256::from(1998u64));
     }
 
     #[test]
@@ -986,12 +990,12 @@ mod tests {
         state_writer.write_state("after_alice_claim", &token, total_delays);
 
         // Verify final state
-        assert_eq!(token.balance_of(&admin), U256::from(9998));
-        assert_eq!(token.staked_cspr(), U512::from(109998));
-        assert_eq!(token.total_supply(), U256::from(9998));
+        assert_eq!(token.balance_of(&admin), U256::from(19998));
+        assert_eq!(token.staked_cspr(), U512::from(19999));
+        assert_eq!(token.total_supply(), U256::from(19998));
         assert_eq!(
             env.balance_of(&alice),
-            alice_initial_cspr_balance + U512::from(99999) - U512::from(9999)
+            alice_initial_cspr_balance + U512::from(179999)
         );
     }
 
@@ -1017,30 +1021,30 @@ mod tests {
         let alice_initial_cspr_balance = env.balance_of(&alice);
         let bob_initial_cspr_balance = env.balance_of(&bob);
 
-        // When Alice stakes 10 CSPR.
+        // When Alice stakes 1000 CSPR.
         let deposit_amount_u512 = U512::from(1_000_000_000_000u64);
         let deposit_amount_u256 = U256::from(1_000_000_000_000u64);
         env.set_caller(alice);
         token.with_tokens(deposit_amount_u512).stake();
 
-        // Then staked CSPR should be 10 CSPR.
+        // Then staked CSPR should be 1000 CSPR.
         assert_eq!(token.staked_cspr(), deposit_amount_u512);
 
-        // Then Alice's balance should be less by 10 CSPR.
+        // Then Alice's balance should be less by 1000 CSPR.
         let expected_amount = alice_initial_cspr_balance - deposit_amount_u512;
         assert_eq!(env.balance_of(&alice), expected_amount);
 
-        // Then Alice's balance should be 10 sCSPR.
+        // Then Alice's balance should be 1000 sCSPR.
         assert_eq!(token.balance_of(&alice), deposit_amount_u256);
 
-        // When Alice transfers 10 sCSPR to Bob.
+        // When Alice transfers 1000 sCSPR to Bob.
         env.set_caller(alice);
         token.transfer(&bob, &deposit_amount_u256);
 
         // When time passes
         env.advance_with_auctions(auction_delay);
 
-        // When Bob unstakes 10 sCSPR.
+        // When Bob unstakes 1000 sCSPR.
         env.set_caller(bob);
         token.unstake(deposit_amount_u256);
 
@@ -1054,8 +1058,8 @@ mod tests {
         env.set_caller(bob);
         token.claim();
 
-        // // Then Bob's CSPR balance should be 10 CSPR more.
-        let expected_amount = bob_initial_cspr_balance + deposit_amount_u512;
+        // // Then Bob's CSPR balance should be 1000 CSPR more and a reward.
+        let expected_amount = bob_initial_cspr_balance + deposit_amount_u512 + U512::from(90000u64);
         assert_eq!(env.balance_of(&bob), expected_amount);
     }
 
