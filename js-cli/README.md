@@ -213,6 +213,23 @@ Event:
     unstake_id: 29
 ```
 
+### Get sCSPR balance
+
+To get the sCSPR balance for an account, use the `get_scspr_balance` script:
+
+```bash
+npm run scripts:get_scspr_balance -- \
+  --node_url https://node.testnet.casper.network/rpc \
+  --contract_hash <contract_hash> \
+  --account_hash <account_hash>
+```
+
+Example output:
+
+```
+sCSPR balance: 123456789
+```
+
 ## Recovering the sCSPR/CSPR rate
 
 The CSPR/sCSPR rate, is calculated by dividing the total supply of `sCSPR` by the total amount of CSPR staked.
