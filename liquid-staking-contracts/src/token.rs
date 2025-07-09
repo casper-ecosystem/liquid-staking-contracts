@@ -407,6 +407,30 @@ impl StakedCSPR {
         );
     }
 
+    /// Stakes transferred funds to the given validator.
+    /// This is useful when the validator is below or close to the minimum delegation amount.
+    /// To keep the price stable, it will mint sCSPR to the caller.
+    #[odra(payable)]
+    pub fn stake_to_validator(&mut self, validator: PublicKey) {
+        let caller = self.env().caller();
+        self.ownable.assert_owner(&caller);
+        let cspr_amount = self.env().attached_value();
+
+        let staked_cspr_before = self.staked_cspr();
+        self.delegate(validator, cspr_amount);
+        let scspr_amount = self.cspr_to_scspr(cspr_amount, staked_cspr_before);
+
+        self.token.raw_mint(&caller, &scspr_amount);
+        self.env().emit_event(Staked {
+            address: caller,
+            cspr_amount,
+            scspr_minted: scspr_amount,
+        });
+
+        let staked_cspr_after = staked_cspr_before + cspr_amount;
+        self.last_recorded_delegated_amount.set(staked_cspr_after);
+    }
+
     /// Adds loose tokens to the contract
     /// This function is payable, the attached value is the amount of CSPR to add
     /// to the contract, without staking it.
@@ -913,22 +937,21 @@ mod tests {
         token.with_tokens(deposit_amount_u512).stake();
 
         // And some time passes
-        // First auction is for the delay to kick in the staking
-        env.advance_with_auctions(auction_delay * 2);
+        env.advance_with_auctions(auction_delay);
 
         // And Bob stakes 10 CSPR.
         env.set_caller(bob);
         token.with_tokens(deposit_amount_u512).stake();
 
-        // Then Admin has 1998 Motes
-        assert_eq!(token.balance_of(&admin), U256::from(1998u64));
+        // Then Admin has 998 Motes
+        assert_eq!(token.balance_of(&admin), U256::from(998u64));
     }
 
     #[test]
     fn test_staking() {
         let env = odra_test::env();
         let auction_delay = env.auction_delay();
-        let unbonding_delay = auction_delay * 8;
+        let unbonding_delay = auction_delay * 7;
 
         // Setup accounts
         let alice = env.get_account(1);
@@ -1060,6 +1083,7 @@ mod tests {
 
         // // Then Bob's CSPR balance should be 1000 CSPR more and a reward.
         let expected_amount = bob_initial_cspr_balance + deposit_amount_u512 + U512::from(90000u64);
+
         assert_eq!(env.balance_of(&bob), expected_amount);
     }
 

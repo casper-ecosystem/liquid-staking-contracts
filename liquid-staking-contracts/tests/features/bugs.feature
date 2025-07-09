@@ -29,9 +29,10 @@ Feature: Bug fixes and edge cases
     Then Alice has 100 CSPR
     And Alice's token balance is 400 sCSPR
     And the contract has 400 CSPR
+    And 400 CSPR is staked
 
     # For Alice to unstake the rest, we need to stake some more tokens
-    When Bob stakes 500 CSPR
+    When Owner stakes 500 CSPR to the Validator1
     Then 900 CSPR is staked
     And 900 sCSPR is in the pool
     When Alice unstakes 400 sCSPR

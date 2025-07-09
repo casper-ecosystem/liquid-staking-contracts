@@ -49,6 +49,17 @@ fn restake_loose_tokens(world: &mut LSTWorld, account: Account) {
     world.token.restake_loose_tokens();
 }
 
+#[when(expr = "{account} stakes {cspr_amount} CSPR to the Validator1")]
+fn stake_cspr_to_validator(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
+    let validator = world.env.env().get_validator(0);
+    world.env.set_caller(&account);
+    world
+        .token
+        .with_tokens(*cspr_amount)
+        .stake_to_validator(validator);
+    world.update_pool_state("stake_cspr_to_validator");
+}
+
 #[then(expr = "{account} cannot unstake {scspr} sCSPR because there's no backing for redemption")]
 fn cannot_unstake_because_no_backing(
     world: &mut LSTWorld,
