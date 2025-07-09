@@ -43,7 +43,7 @@ Feature: Multiple Validators
     Given Alice has 1000 CSPR
     And Owner has 0 CSPR
     When Alice stakes 1000 CSPR
-    And 2 auction passes
+    And 1 auction passes
     Then 1000.000099999 CSPR is staked
     And Owner has 0 sCSPR
     When Owner removes Validator1
@@ -56,9 +56,10 @@ Feature: Multiple Validators
     And Alice unstakes everything
     And unbonding period passes
     And Alice claims unstakes
-    Then Alice has roughly 1000.00019 CSPR
+    Then Alice has roughly 1000.00009 CSPR
     And Owner has 0.000009998 sCSPR
-    When Owner unstakes everything
+    When Owner adds 500 CSPR to the pool
+    And Owner unstakes everything
     And unbonding period passes
     And Owner claims unstakes
     Then Owner has 0.000009999 CSPR

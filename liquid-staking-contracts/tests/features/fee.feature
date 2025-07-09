@@ -13,9 +13,9 @@ Feature: Administration fees
 
   Scenario: Fee collection with exact numbers - small reward
     Given Alice has 1000 CSPR
-    And Owner has 0 CSPR
+    And Owner has 500 CSPR
     When Alice stakes 1000 CSPR
-    And 2 auction passes
+    And 1 auction passes
     Then 1000.000099999 CSPR is staked
     And Owner has 0 sCSPR
     When Alice unstakes everything
@@ -23,28 +23,30 @@ Feature: Administration fees
     And Alice claims unstakes
     Then Alice has 1000.00009 CSPR
     And Owner has 0.000009998 sCSPR
+    When Owner adds 500 CSPR to the pool
     When Owner unstakes everything
     And unbonding period passes
     And Owner claims unstakes
-    Then Owner has 0.000100839 CSPR
-    And 0.000009159 CSPR is staked
-    And 0.000000908 sCSPR is in the pool
+    Then Owner has 500.000009999 CSPR
+    And 0 CSPR is staked
+    And 0 sCSPR is in the pool
 
   Scenario: Fee collection with exact numbers - BIG reward
     Given Alice has 1000 CSPR
-    And Owner has 0 CSPR
+    And Owner has 500 CSPR
     When Alice stakes 1000 CSPR
     And 101 auction passes
-    Then 1000.009999900 CSPR is staked
+    Then 1000.010099899 CSPR is staked
     And Owner has 0 sCSPR
     When Alice unstakes everything
     And unbonding period passes
     And Alice claims unstakes
-    Then Alice has 1000.008999911 CSPR
-    And Owner has 0.00099998 sCSPR
-    When Owner unstakes everything
+    Then Alice has 1000.009089911 CSPR
+    And Owner has 0.001009978 sCSPR
+    When Owner adds 500 CSPR to the pool
+    And Owner unstakes everything
     And unbonding period passes
     And Owner claims unstakes
-    Then Owner has 0.001090080 CSPR
-    And 0.000009908 CSPR is staked
-    And 0.000009089 sCSPR is in the pool
+    Then Owner has 500.001009988 CSPR
+    And 0 CSPR is staked
+    And 0 sCSPR is in the pool

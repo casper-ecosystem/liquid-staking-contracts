@@ -58,7 +58,7 @@ pub enum Error {
 /// It is used to store the unstaking information for each user
 /// as the unstaking needs to wait for the unbonding delay before it can be claimed
 #[odra::odra_type]
-struct UnstakingInfo {
+pub struct UnstakingInfo {
     /// The id of the unstake
     unstake_id: u32,
     /// The address of the owner of the unstake
@@ -382,7 +382,7 @@ impl StakedCSPR {
             // Unstake all the stake from the validator, but only if there is some stake
             let cspr_amount = self.env().delegated_amount(public_key.clone());
             if cspr_amount > U512::zero() {
-                self.undelegate(public_key, cspr_amount);
+                self.undelegate(public_key, cspr_amount, cspr_amount);
                 total_unstaked = total_unstaked
                     .checked_add(cspr_amount)
                     .unwrap_or_revert_with(self, TotalUnstakesOverflow);
@@ -405,6 +405,30 @@ impl StakedCSPR {
                 .get_or_default()
                 .saturating_add(total_unstaked),
         );
+    }
+
+    /// Stakes transferred funds to the given validator.
+    /// This is useful when the validator is below or close to the minimum delegation amount.
+    /// To keep the price stable, it will mint sCSPR to the caller.
+    #[odra(payable)]
+    pub fn stake_to_validator(&mut self, validator: PublicKey) {
+        let caller = self.env().caller();
+        self.ownable.assert_owner(&caller);
+        let cspr_amount = self.env().attached_value();
+
+        let staked_cspr_before = self.staked_cspr();
+        self.delegate(validator, cspr_amount);
+        let scspr_amount = self.cspr_to_scspr(cspr_amount, staked_cspr_before);
+
+        self.token.raw_mint(&caller, &scspr_amount);
+        self.env().emit_event(Staked {
+            address: caller,
+            cspr_amount,
+            scspr_minted: scspr_amount,
+        });
+
+        let staked_cspr_after = staked_cspr_before + cspr_amount;
+        self.last_recorded_delegated_amount.set(staked_cspr_after);
     }
 
     /// Adds loose tokens to the contract
@@ -561,6 +585,16 @@ impl StakedCSPR {
     pub fn removed_validator_stake(&self) -> U512 {
         self.removed_validator_stake.get_or_default()
     }
+
+    pub fn get_unstake_ids(&self, account: &Address) -> Vec<u32> {
+        self.unstake_ids.get_or_default(account)
+    }
+
+    pub fn get_unstake(&self, unstake_id: u32) -> UnstakingInfo {
+        self.unstakes
+            .get(unstake_id)
+            .unwrap_or_revert_with(self, UnstakeNotFound)
+    }
 }
 
 impl StakedCSPR {
@@ -573,7 +607,11 @@ impl StakedCSPR {
         });
     }
 
-    fn undelegate(&self, public_key: PublicKey, amount: U512) {
+    fn undelegate(&mut self, public_key: PublicKey, amount: U512, delegated_amount: U512) {
+        if delegated_amount - amount < self.get_min_stake() {
+            self.removed_validator_stake
+                .set(self.removed_validator_stake() + delegated_amount - amount);
+        }
         self.env().undelegate(public_key.clone(), amount);
         self.env().emit_event(Undelegated {
             address: self.env().caller(),
@@ -621,7 +659,7 @@ impl StakedCSPR {
 
         let staked_cspr = self.staked_cspr();
 
-        // If there's no staked CSPR, conversion would be 1:1
+        // If there's no staked CSPR, we cannot convert
         if staked_cspr.is_zero() {
             self.env().revert(NoBackingForRedemption);
         }
@@ -757,7 +795,7 @@ impl StakedCSPR {
                     delegated
                 };
 
-                self.undelegate(validator, amount_to_undelegate);
+                self.undelegate(validator, amount_to_undelegate, delegated);
                 remaining_amount = remaining_amount
                     .checked_sub(amount_to_undelegate)
                     .unwrap_or_revert_with(self, ArithmeticsError);
@@ -893,20 +931,19 @@ mod tests {
         let bob = env.get_account(2);
         let admin = env.get_account(0);
 
-        // When Alice stakes 10 CSPR.
+        // When Alice stakes 1000 CSPR.
         let deposit_amount_u512 = U512::from(1_000_000_000_000u64);
         env.set_caller(alice);
         token.with_tokens(deposit_amount_u512).stake();
 
         // And some time passes
-        // First auction is for the delay to kick in the staking
-        env.advance_with_auctions(auction_delay * 2);
+        env.advance_with_auctions(auction_delay);
 
-        // And Bob stakes 10 CSPR.
+        // And Bob stakes 1000 CSPR.
         env.set_caller(bob);
         token.with_tokens(deposit_amount_u512).stake();
 
-        // Then Admin has 998 sCSPR
+        // Then Admin has 998 Motes
         assert_eq!(token.balance_of(&admin), U256::from(998u64));
     }
 
@@ -914,11 +951,11 @@ mod tests {
     fn test_staking() {
         let env = odra_test::env();
         let auction_delay = env.auction_delay();
-        let unbonding_delay = auction_delay * 8;
+        let unbonding_delay = auction_delay * 7;
 
         // Setup accounts
-        let alice = env.get_account(1);
         let admin = env.get_account(0);
+        let alice = env.get_account(1);
         let alice_initial_cspr_balance = env.balance_of(&alice);
 
         // For debugging purposes
@@ -976,12 +1013,12 @@ mod tests {
         state_writer.write_state("after_alice_claim", &token, total_delays);
 
         // Verify final state
-        assert_eq!(token.balance_of(&admin), U256::from(9998));
-        assert_eq!(token.staked_cspr(), U512::from(109998));
-        assert_eq!(token.total_supply(), U256::from(9998));
+        assert_eq!(token.balance_of(&admin), U256::from(19998));
+        assert_eq!(token.staked_cspr(), U512::from(19999));
+        assert_eq!(token.total_supply(), U256::from(19998));
         assert_eq!(
             env.balance_of(&alice),
-            alice_initial_cspr_balance + U512::from(99999) - U512::from(9999)
+            alice_initial_cspr_balance + U512::from(179999)
         );
     }
 
@@ -1007,30 +1044,30 @@ mod tests {
         let alice_initial_cspr_balance = env.balance_of(&alice);
         let bob_initial_cspr_balance = env.balance_of(&bob);
 
-        // When Alice stakes 10 CSPR.
+        // When Alice stakes 1000 CSPR.
         let deposit_amount_u512 = U512::from(1_000_000_000_000u64);
         let deposit_amount_u256 = U256::from(1_000_000_000_000u64);
         env.set_caller(alice);
         token.with_tokens(deposit_amount_u512).stake();
 
-        // Then staked CSPR should be 10 CSPR.
+        // Then staked CSPR should be 1000 CSPR.
         assert_eq!(token.staked_cspr(), deposit_amount_u512);
 
-        // Then Alice's balance should be less by 10 CSPR.
+        // Then Alice's balance should be less by 1000 CSPR.
         let expected_amount = alice_initial_cspr_balance - deposit_amount_u512;
         assert_eq!(env.balance_of(&alice), expected_amount);
 
-        // Then Alice's balance should be 10 sCSPR.
+        // Then Alice's balance should be 1000 sCSPR.
         assert_eq!(token.balance_of(&alice), deposit_amount_u256);
 
-        // When Alice transfers 10 sCSPR to Bob.
+        // When Alice transfers 1000 sCSPR to Bob.
         env.set_caller(alice);
         token.transfer(&bob, &deposit_amount_u256);
 
         // When time passes
         env.advance_with_auctions(auction_delay);
 
-        // When Bob unstakes 10 sCSPR.
+        // When Bob unstakes 1000 sCSPR.
         env.set_caller(bob);
         token.unstake(deposit_amount_u256);
 
@@ -1044,8 +1081,9 @@ mod tests {
         env.set_caller(bob);
         token.claim();
 
-        // // Then Bob's CSPR balance should be 10 CSPR more.
-        let expected_amount = bob_initial_cspr_balance + deposit_amount_u512;
+        // // Then Bob's CSPR balance should be 1000 CSPR more and a reward.
+        let expected_amount = bob_initial_cspr_balance + deposit_amount_u512 + U512::from(90000u64);
+
         assert_eq!(env.balance_of(&bob), expected_amount);
     }
 

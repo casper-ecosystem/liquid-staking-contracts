@@ -8,12 +8,12 @@ resolver = "2"
 
 [workspace.dependencies]
 cucumber = { version = "0.21.0" }
-odra = { version = "2.0.1" }
-odra-cli = { version = "2.0.1" }
-odra-modules = { version = "2.0.1" }
-odra-test = { version = "2.0.1" }
-odra-build = { version = "2.0.1" }
-odra-bdd = { version = "2.0.1" }
+odra = { version = "2.1.0" }
+odra-cli = { version = "2.1.0" }
+odra-modules = { version = "2.1.0"}
+odra-test = { version = "2.1.0"}
+odra-build = { version = "2.1.0"}
+odra-bdd = { version = "2.1.0" }
 
 [profile.release]
 codegen-units = 1

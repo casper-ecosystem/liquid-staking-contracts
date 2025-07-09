@@ -1,7 +1,7 @@
 use crate::lst_world::{LSTWorld, StakedCSPRAmount};
 use cucumber::{given, then, when};
+use liquid_staking_contracts::token;
 use odra::host::HostRef;
-use odra::prelude::OdraError;
 use odra_bdd::types::account::Account;
 use odra_bdd::types::cspr::CSPRAmount;
 
@@ -49,6 +49,17 @@ fn restake_loose_tokens(world: &mut LSTWorld, account: Account) {
     world.token.restake_loose_tokens();
 }
 
+#[when(expr = "{account} stakes {cspr_amount} CSPR to the Validator1")]
+fn stake_cspr_to_validator(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
+    let validator = world.env.env().get_validator(0);
+    world.env.set_caller(&account);
+    world
+        .token
+        .with_tokens(*cspr_amount)
+        .stake_to_validator(validator);
+    world.update_pool_state("stake_cspr_to_validator");
+}
+
 #[then(expr = "{account} cannot unstake {scspr} sCSPR because there's no backing for redemption")]
 fn cannot_unstake_because_no_backing(
     world: &mut LSTWorld,
@@ -57,6 +68,9 @@ fn cannot_unstake_because_no_backing(
 ) {
     world.env.set_caller(&account);
     let result = world.token.try_unstake(scspr.amount());
-    assert_eq!(result.err().unwrap(), OdraError::user(61416));
+    assert_eq!(
+        result.err().unwrap(),
+        token::Error::NoBackingForRedemption.into()
+    );
     world.update_pool_state("cannot_unstake_because_no_backing");
 }

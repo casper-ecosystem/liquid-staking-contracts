@@ -26,20 +26,23 @@ $ just test
 ## Liquid Staking CLI
 
 ```bash
-$ just cli
+$ just cli -h
 
 Liquid Staking for CSPR. The CLI.
 
-Usage: liquid-staking-cli <COMMAND>
+Usage: liquid-staking-cli [OPTIONS] <COMMAND>
 
 Commands:
-  deploy    Runs the deploy script
-  contract  Commands for interacting with contracts
-  scenario  Commands for running user-defined scenarios
-  help      Print this message or the help of the given subcommand(s)
+  deploy        Runs the deploy script
+  contract      Commands for interacting with contracts
+  scenario      Commands for interacting with scenarios
+  print-events  Prints the most recent events emitted by a contract
+  whoami        Prints the address of the current caller.
+  help          Print this message or the help of the given subcommand(s)
 
 Options:
-  -h, --help  Print help
+  -c, --contracts-toml <PathBuf>  The path to the file with the deployed contracts. Relative to the project root.
+  -h, --help                      Print help
 ```
 
 This tool is used to interact with the contract on the Casper network. To deploy the contract, make sure it is built:
@@ -57,7 +60,7 @@ Then you can deploy the contract:
 $ just cli deploy
 ```
 
-The repository holds a [deployed_contracts.toml](resources/deployed_contracts.toml) file that contains the information about the latest contract deployed on the testnet, so you can skip the deployment step and use it directly.
+The repository holds a [contracts.toml](resources/contracts.toml) file that contains the information about the latest contract deployed on the testnet, so you can skip the deployment step and use it directly.
 
 To see all the entrypoints of the contract, you can use the following command:
 
@@ -71,7 +74,7 @@ Below are some examples of how to use the contract.
 You can stake CSPR using CLI.
 
 ```bash
-$ just cli contract StakedCSPR stake --__attached_value 1000000000
+$ just cli contract StakedCSPR stake --attached_value 1000000000
 
 💁  INFO : Calling "hash-462aee162553159ae9b380cd5b7f915a2a0e11bdc0127792c3e6b8077b4e3a67" with entrypoint "stake" through proxy.
 💁  INFO : Command executed successfully
@@ -94,4 +97,4 @@ Remember about `.env` file.
 ## Testnet Instance
 
 Contract is deployed to the testnet. Contract's package hash is defined in
-[deployed_contracts.toml](resources/deployed_contracts.toml) file.
+[contracts.toml](resources/contracts.toml) file.

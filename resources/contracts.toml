@@ -1,0 +1,5 @@
+time = "2025-06-18T19:18:34Z"
+
+[[contracts]]
+name = "StakedCSPR"
+package_hash = "hash-20b6b67cc838b43a2168919068c2bedee3ad730d624d86e2e2ae144e902f6de1"

@@ -94,49 +94,8 @@
       ]
     },
     {
-      "name": "RoleAdminChanged",
+      "name": "Delegated",
       "args": [
-        {
-          "name": "role",
-          "ty": {
-            "ByteArray": 32
-          },
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
-        {
-          "name": "previous_admin_role",
-          "ty": {
-            "ByteArray": 32
-          },
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
-        {
-          "name": "new_admin_role",
-          "ty": {
-            "ByteArray": 32
-          },
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        }
-      ]
-    },
-    {
-      "name": "RoleGranted",
-      "args": [
-        {
-          "name": "role",
-          "ty": {
-            "ByteArray": 32
-          },
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
         {
           "name": "address",
           "ty": "Key",
@@ -145,8 +104,15 @@
           "is_required": true
         },
         {
-          "name": "sender",
-          "ty": "Key",
+          "name": "amount",
+          "ty": "U512",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "validator",
+          "ty": "PublicKey",
           "is_ref": false,
           "is_slice": false,
           "is_required": true
@@ -154,17 +120,8 @@
       ]
     },
     {
-      "name": "RoleRevoked",
+      "name": "Undelegated",
       "args": [
-        {
-          "name": "role",
-          "ty": {
-            "ByteArray": 32
-          },
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
         {
           "name": "address",
           "ty": "Key",
@@ -173,7 +130,100 @@
           "is_required": true
         },
         {
-          "name": "sender",
+          "name": "amount",
+          "ty": "U512",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "validator",
+          "ty": "PublicKey",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "ValidatorRemoved",
+      "args": [
+        {
+          "name": "validator",
+          "ty": "PublicKey",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "ValidatorAdded",
+      "args": [
+        {
+          "name": "validator",
+          "ty": "PublicKey",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "CsprAddedToPool",
+      "args": [
+        {
+          "name": "amount",
+          "ty": "U512",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "CsprRemovedFromPool",
+      "args": [
+        {
+          "name": "amount",
+          "ty": "U512",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "CsprWithdrawnFromContract",
+      "args": [
+        {
+          "name": "amount",
+          "ty": "U512",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "recipient",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "FeeCollected",
+      "args": [
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "recipient",
           "ty": "Key",
           "is_ref": false,
           "is_slice": false,
@@ -371,23 +421,69 @@
       ]
     },
     {
-      "name": "ChangeSecurity",
+      "name": "OwnershipTransferStarted",
       "args": [
         {
-          "name": "admin",
-          "ty": "Key",
+          "name": "previous_owner",
+          "ty": {
+            "Option": "Key"
+          },
           "is_ref": false,
           "is_slice": false,
           "is_required": true
         },
         {
-          "name": "sec_change_map",
+          "name": "new_owner",
           "ty": {
-            "Map": {
-              "key": "Key",
-              "value": "U8"
-            }
+            "Option": "Key"
           },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "OwnershipTransferred",
+      "args": [
+        {
+          "name": "previous_owner",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "new_owner",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "Paused",
+      "args": [
+        {
+          "name": "account",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "Unpaused",
+      "args": [
+        {
+          "name": "account",
+          "ty": "Key",
           "is_ref": false,
           "is_slice": false,
           "is_required": true
@@ -409,6 +505,20 @@
         {
           "name": "claim_time",
           "ty": "U64",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "fee_percentage",
+          "ty": "U512",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "min_stake",
+          "ty": "U512",
           "is_ref": false,
           "is_slice": false,
           "is_required": true
@@ -441,21 +551,13 @@
         }
       ],
       "is_mutable": true,
-      "return_ty": "U32",
+      "return_ty": "Unit",
       "ty": "Public",
       "attributes": []
     },
     {
       "name": "claim",
-      "args": [
-        {
-          "name": "unstake_id",
-          "ty": "U32",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        }
-      ],
+      "args": [],
       "is_mutable": true,
       "return_ty": "Unit",
       "ty": "Public",
@@ -470,8 +572,72 @@
       "attributes": []
     },
     {
-      "name": "add_to_the_pool",
+      "name": "get_min_stake",
       "args": [],
+      "is_mutable": false,
+      "return_ty": "U512",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "set_min_stake",
+      "args": [
+        {
+          "name": "min_stake",
+          "ty": "U512",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "add_validator",
+      "args": [
+        {
+          "name": "public_key",
+          "ty": "PublicKey",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "remove_validator",
+      "args": [
+        {
+          "name": "public_key",
+          "ty": "PublicKey",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "stake_to_validator",
+      "args": [
+        {
+          "name": "validator",
+          "ty": "PublicKey",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
       "is_mutable": true,
       "return_ty": "Unit",
       "ty": "Public",
@@ -480,10 +646,102 @@
       ]
     },
     {
-      "name": "remove_from_the_pool",
+      "name": "add_loose_tokens",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": [
+        "Payable"
+      ]
+    },
+    {
+      "name": "restake_loose_tokens",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_validators",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": {
+        "List": "PublicKey"
+      },
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_validator_stake",
       "args": [
         {
-          "name": "amount",
+          "name": "validator",
+          "ty": "PublicKey",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "U512",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_total_stake",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U512",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_loose_tokens",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U512",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_claim_time",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U64",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "set_claim_time",
+      "args": [
+        {
+          "name": "claim_time",
+          "ty": "U64",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_fee_percentage",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U512",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "set_fee_percentage",
+      "args": [
+        {
+          "name": "fee_percentage",
           "ty": "U512",
           "is_ref": false,
           "is_slice": false,
@@ -496,164 +754,26 @@
       "attributes": []
     },
     {
-      "name": "withdraw_from_the_pool",
-      "args": [
-        {
-          "name": "amount",
-          "ty": "U512",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        }
-      ],
+      "name": "pause",
+      "args": [],
       "is_mutable": true,
       "return_ty": "Unit",
       "ty": "Public",
       "attributes": []
     },
     {
-      "name": "has_role",
-      "args": [
-        {
-          "name": "role",
-          "ty": {
-            "ByteArray": 32
-          },
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
-        {
-          "name": "address",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        }
-      ],
+      "name": "unpause",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "is_paused",
+      "args": [],
       "is_mutable": false,
       "return_ty": "Bool",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "grant_role",
-      "args": [
-        {
-          "name": "role",
-          "ty": {
-            "ByteArray": 32
-          },
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
-        {
-          "name": "address",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        }
-      ],
-      "is_mutable": true,
-      "return_ty": "Unit",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "revoke_role",
-      "args": [
-        {
-          "name": "role",
-          "ty": {
-            "ByteArray": 32
-          },
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
-        {
-          "name": "address",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        }
-      ],
-      "is_mutable": true,
-      "return_ty": "Unit",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "name",
-      "args": [],
-      "is_mutable": false,
-      "return_ty": "String",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "symbol",
-      "args": [],
-      "is_mutable": false,
-      "return_ty": "String",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "decimals",
-      "args": [],
-      "is_mutable": false,
-      "return_ty": "U8",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "total_supply",
-      "args": [],
-      "is_mutable": false,
-      "return_ty": "U256",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "balance_of",
-      "args": [
-        {
-          "name": "account",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        }
-      ],
-      "is_mutable": false,
-      "return_ty": "U256",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "allowance",
-      "args": [
-        {
-          "name": "owner",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
-        {
-          "name": "spender",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        }
-      ],
-      "is_mutable": false,
-      "return_ty": "U256",
       "ty": "Public",
       "attributes": []
     },
@@ -780,31 +900,132 @@
       "attributes": []
     },
     {
-      "name": "change_security",
+      "name": "removed_validator_stake",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U512",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_unstake_ids",
       "args": [
         {
-          "name": "admin_list",
-          "ty": {
-            "List": "Key"
-          },
+          "name": "account",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": {
+        "List": "U32"
+      },
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_unstake",
+      "args": [
+        {
+          "name": "unstake_id",
+          "ty": "U32",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "Any",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "name",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "String",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "symbol",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "String",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "decimals",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U8",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "total_supply",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U256",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "balance_of",
+      "args": [
+        {
+          "name": "account",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "U256",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "allowance",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
           "is_ref": false,
           "is_slice": false,
           "is_required": true
         },
         {
-          "name": "minter_list",
-          "ty": {
-            "List": "Key"
-          },
+          "name": "spender",
+          "ty": "Key",
           "is_ref": false,
           "is_slice": false,
           "is_required": true
-        },
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "U256",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_owner",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "Key",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "transfer_ownership",
+      "args": [
         {
-          "name": "none_list",
-          "ty": {
-            "List": "Key"
-          },
+          "name": "new_owner",
+          "ty": "Key",
           "is_ref": false,
           "is_slice": false,
           "is_required": true
@@ -816,46 +1037,8 @@
       "attributes": []
     },
     {
-      "name": "mint",
-      "args": [
-        {
-          "name": "owner",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
-        {
-          "name": "amount",
-          "ty": "U256",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        }
-      ],
-      "is_mutable": true,
-      "return_ty": "Unit",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "burn",
-      "args": [
-        {
-          "name": "owner",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
-        {
-          "name": "amount",
-          "ty": "U256",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        }
-      ],
+      "name": "accept_ownership",
+      "args": [],
       "is_mutable": true,
       "return_ty": "Unit",
       "ty": "Public",
