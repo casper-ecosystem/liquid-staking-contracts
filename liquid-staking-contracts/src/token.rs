@@ -931,7 +931,7 @@ mod tests {
         let bob = env.get_account(2);
         let admin = env.get_account(0);
 
-        // When Alice stakes 10 CSPR.
+        // When Alice stakes 1000 CSPR.
         let deposit_amount_u512 = U512::from(1_000_000_000_000u64);
         env.set_caller(alice);
         token.with_tokens(deposit_amount_u512).stake();
@@ -939,7 +939,7 @@ mod tests {
         // And some time passes
         env.advance_with_auctions(auction_delay);
 
-        // And Bob stakes 10 CSPR.
+        // And Bob stakes 1000 CSPR.
         env.set_caller(bob);
         token.with_tokens(deposit_amount_u512).stake();
 
@@ -954,8 +954,8 @@ mod tests {
         let unbonding_delay = auction_delay * 7;
 
         // Setup accounts
-        let alice = env.get_account(1);
         let admin = env.get_account(0);
+        let alice = env.get_account(1);
         let alice_initial_cspr_balance = env.balance_of(&alice);
 
         // For debugging purposes
