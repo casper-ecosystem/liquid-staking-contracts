@@ -1,6 +1,6 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.81.0-nightly (cf2df68d1 2024-07-01)",
+  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
   "authors": [],
   "repository": null,
   "homepage": null,
@@ -21,29 +21,6 @@
             "name": "amount",
             "description": null,
             "ty": "U256"
-          }
-        ]
-      }
-    },
-    {
-      "struct": {
-        "name": "ChangeSecurity",
-        "description": null,
-        "members": [
-          {
-            "name": "admin",
-            "description": null,
-            "ty": "Key"
-          },
-          {
-            "name": "sec_change_map",
-            "description": null,
-            "ty": {
-              "Map": {
-                "key": "Key",
-                "value": "SecurityBadge"
-              }
-            }
           }
         ]
       }
@@ -73,6 +50,50 @@
     },
     {
       "struct": {
+        "name": "CsprAddedToPool",
+        "description": null,
+        "members": [
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U512"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "CsprRemovedFromPool",
+        "description": null,
+        "members": [
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U512"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "CsprWithdrawnFromContract",
+        "description": null,
+        "members": [
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U512"
+          },
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
         "name": "DecreaseAllowance",
         "description": null,
         "members": [
@@ -95,6 +116,47 @@
             "name": "decr_by",
             "description": null,
             "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Delegated",
+        "description": null,
+        "members": [
+          {
+            "name": "address",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U512"
+          },
+          {
+            "name": "validator",
+            "description": null,
+            "ty": "PublicKey"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "FeeCollected",
+        "description": null,
+        "members": [
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          },
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
           }
         ]
       }
@@ -147,28 +209,21 @@
     },
     {
       "struct": {
-        "name": "RoleAdminChanged",
+        "name": "OwnershipTransferStarted",
         "description": null,
         "members": [
           {
-            "name": "role",
+            "name": "previous_owner",
             "description": null,
             "ty": {
-              "ByteArray": 32
+              "Option": "Key"
             }
           },
           {
-            "name": "previous_admin_role",
+            "name": "new_owner",
             "description": null,
             "ty": {
-              "ByteArray": 32
-            }
-          },
-          {
-            "name": "new_admin_role",
-            "description": null,
-            "ty": {
-              "ByteArray": 32
+              "Option": "Key"
             }
           }
         ]
@@ -176,48 +231,33 @@
     },
     {
       "struct": {
-        "name": "RoleGranted",
+        "name": "OwnershipTransferred",
         "description": null,
         "members": [
           {
-            "name": "role",
+            "name": "previous_owner",
             "description": null,
             "ty": {
-              "ByteArray": 32
+              "Option": "Key"
             }
           },
           {
-            "name": "address",
+            "name": "new_owner",
             "description": null,
-            "ty": "Key"
-          },
-          {
-            "name": "sender",
-            "description": null,
-            "ty": "Key"
+            "ty": {
+              "Option": "Key"
+            }
           }
         ]
       }
     },
     {
       "struct": {
-        "name": "RoleRevoked",
+        "name": "Paused",
         "description": null,
         "members": [
           {
-            "name": "role",
-            "description": null,
-            "ty": {
-              "ByteArray": 32
-            }
-          },
-          {
-            "name": "address",
-            "description": null,
-            "ty": "Key"
-          },
-          {
-            "name": "sender",
+            "name": "account",
             "description": null,
             "ty": "Key"
           }
@@ -323,6 +363,42 @@
     },
     {
       "struct": {
+        "name": "Undelegated",
+        "description": null,
+        "members": [
+          {
+            "name": "address",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U512"
+          },
+          {
+            "name": "validator",
+            "description": null,
+            "ty": "PublicKey"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Unpaused",
+        "description": null,
+        "members": [
+          {
+            "name": "account",
+            "description": null,
+            "ty": "Key"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
         "name": "Unstaked",
         "description": null,
         "members": [
@@ -355,27 +431,60 @@
       }
     },
     {
-      "enum": {
-        "name": "SecurityBadge",
+      "struct": {
+        "name": "UnstakingInfo",
         "description": null,
-        "variants": [
+        "members": [
           {
-            "name": "Admin",
+            "name": "unstake_id",
             "description": null,
-            "discriminant": 0,
-            "ty": "Unit"
+            "ty": "U32"
           },
           {
-            "name": "Minter",
+            "name": "owner",
             "description": null,
-            "discriminant": 1,
-            "ty": "Unit"
+            "ty": "Key"
           },
           {
-            "name": "None",
+            "name": "cspr_amount",
             "description": null,
-            "discriminant": 2,
-            "ty": "Unit"
+            "ty": "U512"
+          },
+          {
+            "name": "claimable_from",
+            "description": null,
+            "ty": "U64"
+          },
+          {
+            "name": "claimed",
+            "description": null,
+            "ty": "Bool"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "ValidatorAdded",
+        "description": null,
+        "members": [
+          {
+            "name": "validator",
+            "description": null,
+            "ty": "PublicKey"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "ValidatorRemoved",
+        "description": null,
+        "members": [
+          {
+            "name": "validator",
+            "description": null,
+            "ty": "PublicKey"
           }
         ]
       }
@@ -383,14 +492,19 @@
   ],
   "errors": [
     {
+      "name": "ActionNotAllowed",
+      "description": "Action not allowed",
+      "discriminant": 61412
+    },
+    {
       "name": "AlreadyClaimed",
-      "description": "",
+      "description": "The unstake has already been claimed",
       "discriminant": 61402
     },
     {
-      "name": "AlreadyInitialized",
-      "description": "This contract instance cannot be initialized again.",
-      "discriminant": 60015
+      "name": "ArithmeticsError",
+      "description": "Arithmetics error",
+      "discriminant": 61411
     },
     {
       "name": "CallerNotTheNewOwner",
@@ -405,12 +519,7 @@
     {
       "name": "CannotTargetSelfUser",
       "description": "The user cannot target themselves.",
-      "discriminant": 60017
-    },
-    {
-      "name": "FailedToGetArgBytes",
-      "description": "Failed to read the runtime arguments provided.",
-      "discriminant": 60009
+      "discriminant": 60003
     },
     {
       "name": "InsufficientAllowance",
@@ -419,73 +528,33 @@
     },
     {
       "name": "InsufficientBalance",
-      "description": "",
-      "discriminant": 61406
-    },
-    {
-      "name": "InsufficientBalance",
       "description": "Spender does not have enough balance.",
       "discriminant": 60001
     },
     {
-      "name": "InsufficientRights",
-      "description": "The caller does not have sufficient security access.",
-      "discriminant": 60010
+      "name": "InsufficientBalance",
+      "description": "The contract does not have enough balance",
+      "discriminant": 61406
     },
     {
-      "name": "InvalidAdminList",
-      "description": "The list of Admin accounts provided is invalid.",
-      "discriminant": 60011
+      "name": "InvalidFeePercentage",
+      "description": "Fee percentage is above the maximum",
+      "discriminant": 61413
     },
     {
-      "name": "InvalidBurnTarget",
-      "description": "The burn target is invalid.",
-      "discriminant": 60018
+      "name": "InvalidMinStake",
+      "description": "The min stake is zero",
+      "discriminant": 61415
     },
     {
-      "name": "InvalidContext",
-      "description": "CEP-18 contract called from within an invalid context.",
-      "discriminant": 60000
-    },
-    {
-      "name": "InvalidEnableMBFlag",
-      "description": "The flag to enable the mint and burn mode is invalid.",
-      "discriminant": 60014
-    },
-    {
-      "name": "InvalidEventsMode",
-      "description": "An invalid event mode was specified.",
-      "discriminant": 60006
-    },
-    {
-      "name": "InvalidMinterList",
-      "description": "The list of accounts that can mint tokens is invalid.",
-      "discriminant": 60012
-    },
-    {
-      "name": "InvalidNoneList",
-      "description": "The list of accounts with no access rights is invalid.",
-      "discriminant": 60013
-    },
-    {
-      "name": "InvalidState",
-      "description": "The contract is in an invalid state. This error should never happen.",
-      "discriminant": 60100
-    },
-    {
-      "name": "MintBurnDisabled",
-      "description": "The mint and burn mode is disabled.",
-      "discriminant": 60016
+      "name": "InvalidUnstakeAmount",
+      "description": "The amount of sCSPR to unstake is zero",
+      "discriminant": 61417
     },
     {
       "name": "MisconfiguredValidator",
-      "description": "",
+      "description": "The validator is misconfigured",
       "discriminant": 61407
-    },
-    {
-      "name": "MissingEventsMode",
-      "description": "The event mode required was not specified.",
-      "discriminant": 60007
     },
     {
       "name": "MissingRole",
@@ -493,24 +562,24 @@
       "discriminant": 20003
     },
     {
+      "name": "NoBackingForRedemption",
+      "description": "No backing for redemption",
+      "discriminant": 61416
+    },
+    {
       "name": "NotAnOwner",
-      "description": "",
+      "description": "The user is not the owner of the contract",
       "discriminant": 61405
     },
     {
       "name": "NotAnOwnerOfAClaim",
-      "description": "",
+      "description": "The user is not the owner of the unstake",
       "discriminant": 61403
     },
     {
       "name": "NotYetClaimable",
-      "description": "",
+      "description": "The unbonding delay has not passed yet",
       "discriminant": 61401
-    },
-    {
-      "name": "Overflow",
-      "description": "Operation would cause an integer overflow.",
-      "discriminant": 60003
     },
     {
       "name": "OwnerNotSet",
@@ -518,19 +587,9 @@
       "discriminant": 20000
     },
     {
-      "name": "PackageHashMissing",
-      "description": "A required package hash was not specified.",
-      "discriminant": 60004
-    },
-    {
-      "name": "PackageHashNotPackage",
-      "description": "The package hash specified does not represent a package.",
-      "discriminant": 60005
-    },
-    {
-      "name": "Phantom",
-      "description": "An unknown error occurred.",
-      "discriminant": 60008
+      "name": "PausedRequired",
+      "description": "Contract needs to be paused first.",
+      "discriminant": 21000
     },
     {
       "name": "RoleRenounceForAnotherAddress",
@@ -538,20 +597,40 @@
       "discriminant": 20004
     },
     {
+      "name": "StakeBelowMinimum",
+      "description": "The stake is below the minimum",
+      "discriminant": 61408
+    },
+    {
+      "name": "TotalUnstakesOverflow",
+      "description": "Total unstakes overflowed",
+      "discriminant": 61409
+    },
+    {
+      "name": "UnpausedRequired",
+      "description": "Contract needs to be unpaused first.",
+      "discriminant": 21001
+    },
+    {
       "name": "UnstakeNotFound",
-      "description": "",
+      "description": "The unstake was not found",
       "discriminant": 61404
     },
     {
-      "name": "_MissingPackageHashForUpgrade",
-      "description": "The package hash for the upgrade is missing.",
-      "discriminant": 60019
+      "name": "ValidatorAlreadyExists",
+      "description": "The validator exists in the list of validators",
+      "discriminant": 61414
+    },
+    {
+      "name": "ValidatorNotInList",
+      "description": "The validator is not in the list of validators",
+      "discriminant": 61410
     }
   ],
   "entry_points": [
     {
       "name": "stake",
-      "description": "",
+      "description": "Stakes CSPR",
       "is_mutable": true,
       "arguments": [],
       "return_ty": "Unit",
@@ -560,7 +639,7 @@
     },
     {
       "name": "unstake",
-      "description": "",
+      "description": "Unstakes sCSPR",
       "is_mutable": true,
       "arguments": [
         {
@@ -570,14 +649,388 @@
           "optional": false
         }
       ],
-      "return_ty": "U32",
+      "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
     },
     {
       "name": "claim",
-      "description": "",
+      "description": "Claims unstaked CSPR",
       "is_mutable": true,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "staked_cspr",
+      "description": "Returns the total amount of CSPR that is staked",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U512",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_min_stake",
+      "description": "Returns the minimum stake",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U512",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "set_min_stake",
+      "description": "Sets the minimum stake",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "min_stake",
+          "description": null,
+          "ty": "U512",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "add_validator",
+      "description": "Adds a validator to the list of validators",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "public_key",
+          "description": null,
+          "ty": "PublicKey",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "remove_validator",
+      "description": "Removes a validator from the list of validators",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "public_key",
+          "description": null,
+          "ty": "PublicKey",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "stake_to_validator",
+      "description": "Stakes transferred funds to the given validator.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "validator",
+          "description": null,
+          "ty": "PublicKey",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "add_loose_tokens",
+      "description": "Adds loose tokens to the contract",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "restake_loose_tokens",
+      "description": "Restakes loose tokens",
+      "is_mutable": true,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_validators",
+      "description": "Returns the list of validators",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": {
+        "List": "PublicKey"
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_validator_stake",
+      "description": "Returns the amount of CSPR that is delegated to a validator",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "validator",
+          "description": null,
+          "ty": "PublicKey",
+          "optional": false
+        }
+      ],
+      "return_ty": "U512",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_total_stake",
+      "description": "Returns the total amount of stake on the contract",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U512",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_loose_tokens",
+      "description": "Returns the amount of loose tokens (CSPR on the contract which is not staked",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U512",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_claim_time",
+      "description": "Returns the claim time",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U64",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "set_claim_time",
+      "description": "Sets the claim time",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "claim_time",
+          "description": null,
+          "ty": "U64",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_fee_percentage",
+      "description": "Returns the fee_percentage",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U512",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "set_fee_percentage",
+      "description": "Sets the fee_percentage",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "fee_percentage",
+          "description": null,
+          "ty": "U512",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "pause",
+      "description": "Pauses the contract",
+      "is_mutable": true,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "unpause",
+      "description": "Unpauses the contract",
+      "is_mutable": true,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "is_paused",
+      "description": "Returns whether the contract is paused",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "transfer",
+      "description": "Transfers tokens from the caller to the recipient.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "recipient",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "transfer_from",
+      "description": "Transfers tokens from the owner to the recipient using the spender's allowance.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "recipient",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "approve",
+      "description": "Approves the spender to spend the given amount of tokens on behalf of the caller.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "decrease_allowance",
+      "description": "Decreases the allowance of the spender by the given amount.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "decr_by",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "increase_allowance",
+      "description": "Increases the allowance of the spender by the given amount.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "inc_by",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "removed_validator_stake",
+      "description": "Returns the amount of stake that was removed from the contract",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U512",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_unstake_ids",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "account",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": {
+        "List": "U32"
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_unstake",
+      "description": "",
+      "is_mutable": false,
       "arguments": [
         {
           "name": "unstake_id",
@@ -586,129 +1039,7 @@
           "optional": false
         }
       ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "staked_cspr",
-      "description": "",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "U512",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "add_to_the_pool",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "remove_from_the_pool",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U512",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "withdraw_from_the_pool",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U512",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "has_role",
-      "description": "Delegated. See `self.access_control.has_role()` for details.",
-      "is_mutable": false,
-      "arguments": [
-        {
-          "name": "role",
-          "description": null,
-          "ty": {
-            "ByteArray": 32
-          },
-          "optional": false
-        },
-        {
-          "name": "address",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        }
-      ],
-      "return_ty": "Bool",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "grant_role",
-      "description": "Delegated. See `self.access_control.grant_role()` for details.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "role",
-          "description": null,
-          "ty": {
-            "ByteArray": 32
-          },
-          "optional": false
-        },
-        {
-          "name": "address",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "revoke_role",
-      "description": "Delegated. See `self.access_control.revoke_role()` for details.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "role",
-          "description": null,
-          "ty": {
-            "ByteArray": 32
-          },
-          "optional": false
-        },
-        {
-          "name": "address",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
+      "return_ty": "UnstakingInfo",
       "is_contract_context": true,
       "access": "public"
     },
@@ -787,20 +1118,23 @@
       "access": "public"
     },
     {
-      "name": "transfer",
-      "description": "Delegated. See `self.token.transfer()` for details.",
+      "name": "get_owner",
+      "description": "Delegated. See `self.ownable.get_owner()` for details.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "Key",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "transfer_ownership",
+      "description": "Delegated. See `self.ownable.transfer_ownership()` for details.",
       "is_mutable": true,
       "arguments": [
         {
-          "name": "recipient",
+          "name": "new_owner",
           "description": null,
           "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
           "optional": false
         }
       ],
@@ -809,173 +1143,10 @@
       "access": "public"
     },
     {
-      "name": "transfer_from",
-      "description": "Delegated. See `self.token.transfer_from()` for details.",
+      "name": "accept_ownership",
+      "description": "Delegated. See `self.ownable.accept_ownership()` for details.",
       "is_mutable": true,
-      "arguments": [
-        {
-          "name": "owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "recipient",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "approve",
-      "description": "Delegated. See `self.token.approve()` for details.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "spender",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "decrease_allowance",
-      "description": "Delegated. See `self.token.decrease_allowance()` for details.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "spender",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "decr_by",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "increase_allowance",
-      "description": "Delegated. See `self.token.increase_allowance()` for details.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "spender",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "inc_by",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "change_security",
-      "description": "Delegated. See `self.token.change_security()` for details.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "admin_list",
-          "description": null,
-          "ty": {
-            "List": "Key"
-          },
-          "optional": false
-        },
-        {
-          "name": "minter_list",
-          "description": null,
-          "ty": {
-            "List": "Key"
-          },
-          "optional": false
-        },
-        {
-          "name": "none_list",
-          "description": null,
-          "ty": {
-            "List": "Key"
-          },
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "mint",
-      "description": "Delegated. See `self.token.mint()` for details.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "burn",
-      "description": "Delegated. See `self.token.burn()` for details.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
+      "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
@@ -987,16 +1158,32 @@
       "ty": "Burn"
     },
     {
-      "name": "ChangeSecurity",
-      "ty": "ChangeSecurity"
-    },
-    {
       "name": "Claimed",
       "ty": "Claimed"
     },
     {
+      "name": "CsprAddedToPool",
+      "ty": "CsprAddedToPool"
+    },
+    {
+      "name": "CsprRemovedFromPool",
+      "ty": "CsprRemovedFromPool"
+    },
+    {
+      "name": "CsprWithdrawnFromContract",
+      "ty": "CsprWithdrawnFromContract"
+    },
+    {
       "name": "DecreaseAllowance",
       "ty": "DecreaseAllowance"
+    },
+    {
+      "name": "Delegated",
+      "ty": "Delegated"
+    },
+    {
+      "name": "FeeCollected",
+      "ty": "FeeCollected"
     },
     {
       "name": "IncreaseAllowance",
@@ -1007,16 +1194,16 @@
       "ty": "Mint"
     },
     {
-      "name": "RoleAdminChanged",
-      "ty": "RoleAdminChanged"
+      "name": "OwnershipTransferStarted",
+      "ty": "OwnershipTransferStarted"
     },
     {
-      "name": "RoleGranted",
-      "ty": "RoleGranted"
+      "name": "OwnershipTransferred",
+      "ty": "OwnershipTransferred"
     },
     {
-      "name": "RoleRevoked",
-      "ty": "RoleRevoked"
+      "name": "Paused",
+      "ty": "Paused"
     },
     {
       "name": "SetAllowance",
@@ -1035,8 +1222,24 @@
       "ty": "TransferFrom"
     },
     {
+      "name": "Undelegated",
+      "ty": "Undelegated"
+    },
+    {
+      "name": "Unpaused",
+      "ty": "Unpaused"
+    },
+    {
       "name": "Unstaked",
       "ty": "Unstaked"
+    },
+    {
+      "name": "ValidatorAdded",
+      "ty": "ValidatorAdded"
+    },
+    {
+      "name": "ValidatorRemoved",
+      "ty": "ValidatorRemoved"
     }
   ],
   "call": {
@@ -1071,6 +1274,18 @@
         "name": "claim_time",
         "description": null,
         "ty": "U64",
+        "optional": false
+      },
+      {
+        "name": "fee_percentage",
+        "description": null,
+        "ty": "U512",
+        "optional": false
+      },
+      {
+        "name": "min_stake",
+        "description": null,
+        "ty": "U512",
         "optional": false
       }
     ]
