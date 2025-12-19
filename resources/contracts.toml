@@ -1,5 +1,5 @@
-time = "2025-06-18T19:18:34Z"
+last_updated = "2025-12-19T13:57:23Z"
 
 [[contracts]]
 name = "StakedCSPR"
-package_hash = "hash-20b6b67cc838b43a2168919068c2bedee3ad730d624d86e2e2ae144e902f6de1"
+package_hash = "hash-baa50d1500aa5361c497c06b40f2822ebb0b5fce5b1c3a037ea628cb68d920f3"

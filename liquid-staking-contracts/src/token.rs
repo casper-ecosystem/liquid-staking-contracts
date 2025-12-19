@@ -112,7 +112,7 @@ impl StakedCSPR {
             fn symbol(&self) -> String;
             fn decimals(&self) -> u8;
             fn total_supply(&self) -> U256;
-            fn balance_of(&self, account: &Address) -> U256;
+            fn balance_of(&self, address: &Address) -> U256;
             fn allowance(&self, owner: &Address, spender: &Address) -> U256;
         }
 

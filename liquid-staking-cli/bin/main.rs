@@ -1,9 +1,9 @@
 use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRInitArgs};
 use odra::{
     casper_types::{bytesrepr::FromBytes, PublicKey, U512},
-    host::{Deployer, HostEnv},
+    host::{HostEnv, InstallConfig},
 };
-use odra_cli::OdraCli;
+use odra_cli::{cspr, DeployerExt, OdraCli};
 
 pub fn validator() -> PublicKey {
     let bytes = "0106ca7c39cd272dbf21a86eeb3b36b7c26e2e9b94af64292419f7862936bca2ca";
@@ -22,8 +22,7 @@ impl odra_cli::deploy::DeployScript for DeployScript {
         env: &HostEnv,
         container: &mut odra_cli::DeployedContractsContainer,
     ) -> Result<(), odra_cli::deploy::Error> {
-        env.set_gas(500_000_000_000);
-        let token = StakedCSPR::try_deploy(
+        StakedCSPR::load_or_deploy_with_cfg(
             env,
             StakedCSPRInitArgs {
                 validator_address: validator(),
@@ -31,8 +30,10 @@ impl odra_cli::deploy::DeployScript for DeployScript {
                 fee_percentage: 1000.into(),
                 min_stake: U512::from(NET_MIN_STAKE),
             },
+            InstallConfig::upgradable::<StakedCSPR>(),
+            container,
+            cspr!(500)
         )?;
-        container.add_contract(&token)?;
         Ok(())
     }
 }
