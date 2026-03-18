@@ -1,0 +1,37 @@
+{
+  "name": "StakeCSPR JS contract client",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "scripts:install_staking": "ts-node install_staking.ts",
+    "scripts:stake": "ts-node stake.ts",
+    "scripts:unstake": "ts-node unstake.ts",
+    "scripts:claim": "ts-node claim.ts",
+    "scripts:get_transaction_events": "ts-node get_transaction_events.ts",
+    "scripts:get_address_claims": "ts-node get_address_claims.ts",
+    "scripts:get_cspr_scpr_rate": "ts-node get_cspr_scpr_rate.ts",
+    "scripts:get_scspr_balance": "ts-node get_scspr_balance.ts"
+  },
+  "keywords": [],
+  "author": "David Hernando <david.hernando@makes.services>",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^29.2.4",
+    "@typescript-eslint/eslint-plugin": "^5.41.0",
+    "@typescript-eslint/parser": "^5.41.0",
+    "dotenv": "^16.0.1",
+    "prettier": "^2.7.1",
+    "ts-jest": "^29.0.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "@ethersproject/bignumber": "^5.7.0",
+    "@make-software/ces-js-parser": "2.0.0",
+    "@noble/hashes": "^1.8.0",
+    "casper-js-sdk": "^5",
+    "commander": "^10.0.0",
+    "ts-results": "^3.3.0"
+  }
+}
