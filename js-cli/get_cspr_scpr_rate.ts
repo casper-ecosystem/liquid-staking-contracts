@@ -49,7 +49,7 @@ const get_cspr_scpr_rate = async () => {
         console.log("Validator:",  validatorPk.toHex());
 
         const [bondingPurse, stakedAmount] = await getStakeInfo(rpcClient, validatorPk, URef.fromString(contractMainPurse));
-        console.log("  Bonding purse:", "https://testnet.cspr.live/uref/" + bondingPurse);
+        console.log("  Bonding purse:", bondingPurse);
         console.log("  Staked amount:", stakedAmount.toString());
 
         totalStaked = totalStaked.add(stakedAmount);

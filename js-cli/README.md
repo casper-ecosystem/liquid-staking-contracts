@@ -268,7 +268,7 @@ curl -X 'GET' \
   -H 'Authorization: 55f79117-fc4d-4d60-9956-65423f39a06a'
 ```
 
-The response returns one or more delegated amoounts:
+The response returns one or more delegated amounts:
 
 ```
 {
@@ -291,7 +291,7 @@ The response returns one or more delegated amoounts:
 }
 ```
 
-To get the sCSPR total supply we can use the RPC interface:
+To get the sCSPR total supply we can use the RPC interface to query for the value of the `total_supply` contract's named key:
 
 ```bash
 curl -X POST https://node.testnet.casper.network/rpc \
