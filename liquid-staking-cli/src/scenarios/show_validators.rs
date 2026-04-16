@@ -35,10 +35,11 @@ impl Scenario for ShowValidators {
 
         for (index, validator) in validators.iter().enumerate() {
             let stake = token.get_validator_stake(validator.clone());
+            let account_hash = validator.to_account_hash().to_formatted_string();
             odra_cli::log(format!(
-                "  {}. {:?} | delegated stake: {}",
+                "  {}. {} | delegated stake: {}",
                 index + 1,
-                validator,
+                account_hash,
                 stake
             ));
         }
