@@ -24,6 +24,7 @@ impl odra_cli::deploy::DeployScript for DeployScript {
     ) -> Result<(), odra_cli::deploy::Error> {
         StakedCSPR::load_or_deploy_with_cfg(
             env,
+            None,
             StakedCSPRInitArgs {
                 validator_address: validator(),
                 claim_time: 2 * ONE_HOUR * 8,
