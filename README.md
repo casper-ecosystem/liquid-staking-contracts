@@ -91,6 +91,15 @@ $ just cli contract StakedCSPR balance_of \
 💁  INFO : 1000000000
 💁  INFO : Command executed successfully
 ```
+
+### Show Validators
+
+You can query the contract and print all configured validators together with their delegated stake.
+
+```bash
+$ just cli scenario ShowValidators
+```
+
 Remember about `.env` file.
 
 

@@ -1,4 +1,5 @@
 use liquid_staking_contracts::token::{StakedCSPR, StakedCSPRInitArgs};
+use liquid_staking_cli::scenarios::ShowValidators;
 use odra::{
     casper_types::{bytesrepr::FromBytes, PublicKey, U512},
     host::{HostEnv, InstallConfig},
@@ -44,6 +45,7 @@ pub fn main() {
         .about("Liquid Staking for CSPR. The CLI.")
         .deploy(DeployScript)
         .contract::<StakedCSPR>()
+        .scenario(ShowValidators)
         .build()
         .run();
 }
