@@ -32,7 +32,7 @@ impl Scenario for UpgradeStakedCSPR {
             stcspr.address()
         ));
 
-        let _ = StakedCSPR::try_upgrade(env, stcspr.address(), NoArgs).unwrap();
+        let _ = StakedCSPR::try_upgrade(env, stcspr.address(), NoArgs)?;
         odra_cli::log("Upgraded StakedCSPR successfully.");
         Ok(())
     }
