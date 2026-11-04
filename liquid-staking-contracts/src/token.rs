@@ -609,17 +609,42 @@ impl StakedCSPR {
         });
     }
 
-    fn undelegate(&mut self, public_key: PublicKey, amount: U512, delegated_amount: U512) {
-        if delegated_amount - amount < self.get_min_stake() {
+    /// Undelegates `amount` from the validator and accounts for anything the
+    /// auction unbonds on top of it.
+    ///
+    /// The auction unbonds the whole delegation when the remainder would fall
+    /// below the validator's own minimum delegation amount. That extra part
+    /// comes back to the contract as loose tokens after the unbonding period,
+    /// so it keeps being counted through `removed_validator_stake` until it is
+    /// restaked. The validator's minimum is read from the auction rather than
+    /// assumed to equal `min_stake`.
+    fn undelegate(&mut self, public_key: PublicKey, amount: U512, delegated_before: U512) {
+        let remainder = delegated_before.saturating_sub(amount);
+        let force_unbonded = if remainder < self.validator_min_delegation(&public_key) {
+            remainder
+        } else {
+            U512::zero()
+        };
+        if !force_unbonded.is_zero() {
             self.removed_validator_stake
-                .set(self.removed_validator_stake() + delegated_amount - amount);
+                .set(self.removed_validator_stake() + force_unbonded);
         }
+
         self.env().undelegate(public_key.clone(), amount);
         self.env().emit_event(Undelegated {
             address: self.env().caller(),
-            amount,
+            amount: amount + force_unbonded,
             validator: public_key,
         });
+    }
+
+    /// The minimum delegation amount the validator accepts, as set in the auction.
+    /// Falls back to the contract's `min_stake` when the validator bid cannot be read.
+    fn validator_min_delegation(&self, validator: &PublicKey) -> U512 {
+        self.env()
+            .get_validator_info(validator.clone())
+            .map(|info| U512::from(info.minimum_delegation_amount))
+            .unwrap_or_else(|| self.get_min_stake())
     }
 
     fn next_claim_time(&self, block_time: u64) -> u64 {
