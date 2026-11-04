@@ -395,9 +395,11 @@ impl StakedCSPR {
             self.env().revert(ValidatorNotInList);
         }
 
-        // Track last recorded delegated amount
-        self.last_recorded_delegated_amount
-            .set(staked_cspr.saturating_sub(total_unstaked));
+        // The removed stake is still counted by `staked_cspr()` through
+        // `removed_validator_stake`, so the total does not change on removal.
+        // The fee baseline must stay at that total, otherwise the next
+        // `collect_fee` would treat the removed stake as a reward.
+        self.last_recorded_delegated_amount.set(staked_cspr);
 
         // Track removed validator stake
         self.removed_validator_stake.set(
