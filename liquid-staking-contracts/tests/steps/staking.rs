@@ -49,9 +49,16 @@ fn restake_loose_tokens(world: &mut LSTWorld, account: Account) {
     world.token.restake_loose_tokens();
 }
 
-#[when(expr = "{account} stakes {cspr_amount} CSPR to the Validator1")]
-fn stake_cspr_to_validator(world: &mut LSTWorld, account: Account, cspr_amount: CSPRAmount) {
-    let validator = world.env.env().get_validator(0);
+// A regex step: the `cspr_amount` parameter regex contains capture groups, which
+// would misalign any cucumber-expression parameter placed after it.
+#[when(regex = r"^([A-Za-z]+) stakes (\d+(?:\.\d+)?) CSPR to the Validator(\d+)$")]
+fn stake_cspr_to_validator(
+    world: &mut LSTWorld,
+    account: Account,
+    cspr_amount: CSPRAmount,
+    validator_num: u32,
+) {
+    let validator = world.env.env().get_validator(validator_num as usize - 1);
     world.env.set_caller(&account);
     world
         .token
